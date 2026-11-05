@@ -1,0 +1,72 @@
+name: Build iOS IPA (unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode project
+      run: xcodegen generate
+
+    - name: Build for device (no signing)
+      run: |
+        xcodebuild \
+          -project Gooya.xcodeproj \
+          -scheme Gooya \
+          -configuration Release \
+          -sdk iphoneos \
+          -destination 'generic/platform=iOS' \
+          -derivedDataPath build \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          build
+
+    - name: Package unsigned IPA
+      run: |
+        APP_PATH=$(find build/Build/Products/Release-iphoneos -name "Gooya.app" -type d | head -1)
+        if [ -z "$APP_PATH" ]; then
+          echo "::error::Gooya.app not found"
+          exit 1
+        fi
+        mkdir Payload
+        cp -R "$APP_PATH" Payload/
+        zip -qr Gooya.ipa Payload -x "*.DS_Store"
+
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: Gooya-iOS
+        path: Gooya.ipa
+        if-no-files-found: error
+
+    - name: Build for simulator (for online simulators like Appetize)
+      run: |
+        xcodebuild \
+          -project Gooya.xcodeproj \
+          -scheme Gooya \
+          -configuration Debug \
+          -sdk iphonesimulator \
+          -destination 'generic/platform=iOS Simulator' \
+          -derivedDataPath build-sim \
+          CODE_SIGNING_ALLOWED=NO \
+          build
+        SIM_APP=$(find build-sim/Build/Products/Debug-iphonesimulator -name "Gooya.app" -type d | head -1)
+        cd "$(dirname "$SIM_APP")" && zip -qr "$GITHUB_WORKSPACE/Gooya-simulator.zip" Gooya.app
+
+    - name: Upload simulator build
+      uses: actions/upload-artifact@v4
+      with:
+        name: Gooya-iOS-Simulator
+        path: Gooya-simulator.zip
+        if-no-files-found: error
