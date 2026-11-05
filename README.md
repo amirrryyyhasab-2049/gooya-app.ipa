@@ -1,0 +1,1 @@
+# gooya-app.ipa
