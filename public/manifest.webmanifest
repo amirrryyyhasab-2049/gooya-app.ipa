@@ -1,0 +1,24 @@
+{
+  "name": "گویا — تبدیل نوشتار به گفتار فارسی",
+  "short_name": "گویا",
+  "description": "متن فارسی خود را با صدایی طبیعی، روان و شمرده بشنوید.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "fa",
+  "background_color": "#0f172a",
+  "theme_color": "#312e81",
+  "categories": ["productivity", "utilities", "education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "استودیو گفتار", "url": "/", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "متن‌های من", "url": "/texts", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

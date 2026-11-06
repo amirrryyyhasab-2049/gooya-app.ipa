@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Vazirmatn", "Segoe UI", Tahoma, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+}
+
+body {
+  font-feature-settings: "ss01", "kern";
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgb(199 210 254);
+}
+
+/* اسکرول‌بار ظریف */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225);
+  border-radius: 999px;
+}
+
+/* اسلایدرها */
+.gooya-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(199 210 254), rgb(221 214 254));
+  outline: none;
+}
+.gooya-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid rgb(99 102 241);
+  box-shadow: 0 2px 8px rgb(79 70 229 / 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.gooya-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.gooya-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid rgb(99 102 241);
+  box-shadow: 0 2px 8px rgb(79 70 229 / 0.35);
+  cursor: pointer;
+}
+
+/* متن با اعراب: فاصلهٔ خطوط بیشتر تا علامت‌ها خوانا باشند */
+.diacritic-text {
+  line-height: 2.4;
+  letter-spacing: 0.01em;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes drawerIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.wave-bar {
+  animation: wave 1s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fadeUp 0.35s ease-out both;
+}
