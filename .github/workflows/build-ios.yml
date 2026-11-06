@@ -2,6 +2,11 @@ name: Build iOS IPA (unsigned)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - "ios/**"
+      - ".github/workflows/build-ios.yml"
 
 jobs:
   build:
@@ -16,9 +21,11 @@ jobs:
       run: brew install xcodegen
 
     - name: Generate Xcode project
+      working-directory: ios
       run: xcodegen generate
 
     - name: Build for device (no signing)
+      working-directory: ios
       run: |
         xcodebuild \
           -project Gooya.xcodeproj \
@@ -34,7 +41,7 @@ jobs:
 
     - name: Package unsigned IPA
       run: |
-        APP_PATH=$(find build/Build/Products/Release-iphoneos -name "Gooya.app" -type d | head -1)
+        APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "Gooya.app" -type d | head -1)
         if [ -z "$APP_PATH" ]; then
           echo "::error::Gooya.app not found"
           exit 1
@@ -51,6 +58,7 @@ jobs:
         if-no-files-found: error
 
     - name: Build for simulator (for online simulators like Appetize)
+      working-directory: ios
       run: |
         xcodebuild \
           -project Gooya.xcodeproj \
