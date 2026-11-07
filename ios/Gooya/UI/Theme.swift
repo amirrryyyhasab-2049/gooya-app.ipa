@@ -34,6 +34,12 @@ extension Color {
     /// کانتینر ثانویهٔ Material 3 (دکمه‌های Tonal و آیتم انتخاب‌شدهٔ منو)
     static let tonalBg = Color(hex: 0xE8DEF8)
     static let tonalFg = Color(hex: 0x1D192B)
+    /// سطح‌های بنفش‌رنگ Material 3 (مقادیر واقعی Material 1.11.0 که اندروید استفاده می‌کند)
+    static let surfaceLow = Color(hex: 0xF7F2FA)      // کارت‌ها و منوی کشویی (colorSurfaceContainerLow)
+    static let surfaceHigh = Color(hex: 0xECE6F0)     // دیالوگ‌ها (colorSurfaceContainerHigh)
+    static let surfaceHighest = Color(hex: 0xE6E0E9)  // ردیف غیرفعال اسلایدر (colorSurfaceContainerHighest)
+    static let outline = Color(hex: 0x79747E)         // colorOutline
+    static let onSurfaceVariant = Color(hex: 0x49454F)
 }
 
 /// گرادیان پس‌زمینهٔ پخش‌کننده و هدر منو (bg_player.xml)
@@ -74,7 +80,7 @@ struct GooyaCardModifier: ViewModifier {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.surfaceLow))
             .shadow(color: Color.black.opacity(0.10), radius: 2, x: 0, y: 1)
     }
 }
@@ -94,5 +100,44 @@ struct SectionTitle: View {
         Text(text)
             .font(.vazir(16, bold: true))
             .foregroundColor(.slate900)
+    }
+}
+
+// MARK: - آیکون‌های پخش (دقیقاً همان مسیرهای vector اندروید: ic_play / ic_pause / ic_stop روی بوم ۲۴×۲۴)
+
+private func glyphPoint(_ rect: CGRect, _ x: CGFloat, _ y: CGFloat) -> CGPoint {
+    let s = min(rect.width, rect.height) / 24
+    let ox = rect.minX + (rect.width - 24 * s) / 2
+    let oy = rect.minY + (rect.height - 24 * s) / 2
+    return CGPoint(x: ox + x * s, y: oy + y * s)
+}
+
+/// مثلث پخش اندروید: M7.4,5 v14 l11,-7 z
+struct PlayShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: glyphPoint(rect, 7.4, 5))
+        p.addLine(to: glyphPoint(rect, 7.4, 19))
+        p.addLine(to: glyphPoint(rect, 18.4, 12))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// مکث: دو میلهٔ ۴×۱۴
+struct PauseShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.addRect(CGRect(origin: glyphPoint(rect, 6, 5), size: CGSize(width: 4 * min(rect.width, rect.height) / 24, height: 14 * min(rect.width, rect.height) / 24)))
+        p.addRect(CGRect(origin: glyphPoint(rect, 14, 5), size: CGSize(width: 4 * min(rect.width, rect.height) / 24, height: 14 * min(rect.width, rect.height) / 24)))
+        return p
+    }
+}
+
+/// توقف: مربع ۱۲×۱۲
+struct StopShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let u = min(rect.width, rect.height) / 24
+        return Path(roundedRect: CGRect(origin: glyphPoint(rect, 6, 6), size: CGSize(width: 12 * u, height: 12 * u)), cornerRadius: 1.5 * u)
     }
 }

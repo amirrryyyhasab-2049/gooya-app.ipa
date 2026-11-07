@@ -13,6 +13,7 @@ enum GButtonKind {
 struct GButton: View {
     let title: String
     var icon: String? = nil
+    var playGlyph: Bool = false
     var kind: GButtonKind = .tonal
     var fontSize: CGFloat = 14
     var enabled: Bool = true
@@ -31,7 +32,9 @@ struct GButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                if let icon = icon {
+                if playGlyph {
+                    PlayShape().fill(foreground).frame(width: fontSize + 8, height: fontSize + 8)
+                } else if let icon = icon {
                     Image(systemName: icon).font(.system(size: fontSize + 2, weight: .semibold))
                 }
                 Text(title).font(.vazir(fontSize, bold: true)).lineLimit(1)
@@ -75,11 +78,13 @@ struct ChipView: View {
         Button(action: action) {
             Text(label)
                 .font(.vazir(14))
-                .foregroundColor(.slate700)
+                .foregroundColor(selected ? .tonalFg : .onSurfaceVariant)
                 .padding(.horizontal, 12)
                 .frame(height: 32)
                 .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(fill ?? (selected ? Color.indigo100 : Color.slate100)))
+                    .fill(fill ?? (selected ? Color.tonalBg : Color.white)))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(selected ? Color.clear : Color.outline, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -388,7 +393,23 @@ struct ReaderTextView: UIViewRepresentable {
     }
 }
 
-// MARK: - اشتراک‌گذاری فایل
+// MARK: - اشتراک‌گذاری فایل (منوی استاندارد iOS؛ از بالاترین ViewController نمایش داده می‌شود)
+
+enum ShareHelper {
+    @MainActor
+    static func present(_ url: URL) -> Bool {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first,
+              var top = window.rootViewController else { return false }
+        while let presented = top.presentedViewController { top = presented }
+        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        vc.popoverPresentationController?.sourceView = top.view
+        vc.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.maxY - 60, width: 1, height: 1)
+        top.present(vc, animated: true)
+        return true
+    }
+}
 
 struct ShareItem: Identifiable {
     let id = UUID()

@@ -61,6 +61,7 @@ struct RootView: View {
         .environmentObject(model)
         .environmentObject(settings)
         .environmentObject(store)
+        .preferredColorScheme(.light)
         .animation(.easeOut(duration: 0.2), value: model.toastText)
     }
 
@@ -127,7 +128,7 @@ struct DrawerView: View {
                                 .font(.vazir(15, bold: model.screen == screen))
                             Spacer()
                         }
-                        .foregroundColor(model.screen == screen ? .tonalFg : Color(hex: 0x49454F))
+                        .foregroundColor(model.screen == screen ? .tonalFg : .onSurfaceVariant)
                         .padding(.horizontal, 16)
                         .frame(height: 56)
                         .background(Capsule().fill(model.screen == screen ? Color.tonalBg : Color.clear))
@@ -143,7 +144,7 @@ struct DrawerView: View {
         .frame(maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
+                .fill(Color.surfaceLow)
                 .padding(.trailing, -20)
                 .ignoresSafeArea()
                 .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 0)

@@ -23,3 +23,17 @@
 - **دیالوگ‌ها:** به‌جای MaterialAlertDialog از برگه‌های (sheet) iOS استفاده شده.
 - **اشتراک متن از برنامه‌های دیگر** (`ACTION_SEND` اندروید): هنوز پیاده نشده.
 - **تاریخ:** تقویم شمسی با `fa_IR`.
+
+## رنگ‌ها: همان Material 3 اندروید
+اندروید از `Theme.Material3.Light` (Material 1.11.0) استفاده می‌کند و بنفش ملایم آن از رنگ‌های پایهٔ Material می‌آید، نه از colors.xml. مقدارها از سورس خود Material خوانده شدند:
+
+| جا | توکن Material | رنگ |
+|---|---|---|
+| کارت‌ها و منوی کشویی | colorSurfaceContainerLow | `#F7F2FA` |
+| دیالوگ‌ها | colorSurfaceContainerHigh | `#ECE6F0` |
+| ردیف غیرفعال اسلایدر | colorSurfaceContainerHighest | `#E6E0E9` |
+| دکمهٔ Tonal، چیپ و آیتم انتخاب‌شده | colorSecondaryContainer | `#E8DEF8` |
+| کادر دکمه‌ها، چیپ‌ها و فیلدها | colorOutline | `#79747E` |
+| متن آیتم‌های غیرفعال | colorOnSurfaceVariant | `#49454F` |
+
+آیکون‌های پخش / مکث / توقف همان مسیرهای vector اندروید هستند (`ic_play`: `M7.4,5v14l11,-7z`)؛ نویسهٔ ▶ در iOS به شکل ایموجی رسم می‌شود و برای همین حذف شد.

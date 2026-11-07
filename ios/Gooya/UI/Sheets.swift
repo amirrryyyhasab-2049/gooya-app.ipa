@@ -34,7 +34,7 @@ private struct DialogFrame<Content: View>: View {
             }
             .padding(24)
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.surfaceHigh.ignoresSafeArea())
         .presentationDetents([.medium, .large])
     }
 }
@@ -54,8 +54,7 @@ struct LabeledField<Content: View>: View {
             Text(label).font(.vazir(12)).foregroundColor(.slate500)
             content
                 .padding(.horizontal, 12)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color(hex: 0x79747E), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).stroke(Color.outline, lineWidth: 1))
         }
     }
 }

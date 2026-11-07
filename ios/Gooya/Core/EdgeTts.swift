@@ -105,6 +105,7 @@ enum EdgeTts {
             + "<voice name='\(voice)'><prosody pitch='\(pitch)' rate='\(rate)' volume='+0%'>\(escapeXml(text))</prosody></voice></speak>"
         let body = "X-RequestId:\(requestId)\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:\(timestamp())Z\r\nPath:ssml\r\n\r\n" + ssml
 
+        DebugLog.write("edge: connect voice=\(voice) chars=\(text.count) skew=\(getSkew())")
         let task = URLSession.shared.webSocketTask(with: request)
         task.resume()
 
@@ -143,10 +144,12 @@ enum EdgeTts {
                 return first
             }
             task.cancel(with: .goingAway, reason: nil)
+            DebugLog.write("edge: ok bytes=\(audio.count)")
             if audio.isEmpty { throw EdgeTtsError.noAudio }
             return audio
         } catch {
             let response = task.response as? HTTPURLResponse
+            DebugLog.write("edge: failed status=\(response?.statusCode ?? -1) error=\(error.localizedDescription)")
             task.cancel(with: .goingAway, reason: nil)
             if let response = response, response.statusCode != 101, response.statusCode != 200 {
                 if response.statusCode == 403,

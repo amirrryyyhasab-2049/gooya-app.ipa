@@ -24,7 +24,6 @@ struct StudioView: View {
     @State private var showSamples = false
     @State private var showSave = false
     @State private var dictSheet: DictSheetData? = nil
-    @State private var shareItem: ShareItem? = nil
     @State private var exporting = false
     @State private var inserter = TextInserter()
 
@@ -103,9 +102,6 @@ struct StudioView: View {
                 unknownWords.removeAll { $0 == data.word }
                 model.toast("به واژه‌نامه اضافه شد. دوباره «اعراب‌گذاری خودکار» را بزنید.")
             }
-        }
-        .sheet(item: $shareItem) { item in
-            ShareSheet(url: item.url)
         }
     }
 
@@ -189,19 +185,34 @@ struct StudioView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
                 Button { playPauseTapped() } label: {
-                    Image(systemName: isActive ? "pause.fill" : "play.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(.white)
-                        .frame(width: 68, height: 68)
-                        .background(Circle().fill(Color.violet600))
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [Color(hex: 0x8B5CF6), Color.violet600],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .shadow(color: Color.violet600.opacity(0.5), radius: 8, x: 0, y: 3)
+                        if engine.status == .loading {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                                .scaleEffect(1.2)
+                        } else if engine.status == .playing {
+                            PauseShape().fill(Color.white).frame(width: 32, height: 32)
+                                .transition(.scale.combined(with: .opacity))
+                        } else {
+                            PlayShape().fill(Color.white).frame(width: 32, height: 32)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .frame(width: 68, height: 68)
+                    .animation(.easeInOut(duration: 0.18), value: engine.status)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("پخش")
 
                 Button { engine.stop() } label: {
-                    Image(systemName: "stop.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
+                    StopShape()
+                        .fill(Color.white)
+                        .frame(width: 24, height: 24)
                         .frame(width: 48, height: 48)
                         .background(Circle().fill(Color.white.opacity(0.2)))
                 }
@@ -288,7 +299,7 @@ struct StudioView: View {
                 .font(.vazir(13))
                 .foregroundColor(.slate500)
                 .lineSpacing(5)
-            GButton(title: "▶ پیش‌نمایش صدا", kind: .tonal) { preview() }
+            GButton(title: "پیش‌نمایش صدا", playGlyph: true, kind: .tonal) { preview() }
         }
         .gooyaCard()
     }
@@ -332,7 +343,7 @@ struct StudioView: View {
 
     private func materialSlider(_ value: Binding<Double>, _ range: ClosedRange<Double>, _ step: Double) -> some View {
         GSlider(value: value, range: range, step: step,
-                active: .indigo600, inactive: .indigo100, thumb: .indigo600,
+                active: .indigo600, inactive: .surfaceHighest, thumb: .indigo600,
                 trackHeight: 4, thumbRadius: 10, haloRadius: 20)
     }
 
@@ -342,12 +353,12 @@ struct StudioView: View {
 
             HStack(spacing: 0) {
                 segmentButton("☁️ نیورال (آنلاین)", selected: settings.online) { settings.online = true }
-                Rectangle().fill(Color(hex: 0x79747E)).frame(width: 1)
+                Rectangle().fill(Color.outline).frame(width: 1)
                 segmentButton("📱 صدای دستگاه", selected: !settings.online) { settings.online = false }
             }
             .frame(height: 40)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color(hex: 0x79747E), lineWidth: 1))
+            .overlay(Capsule().stroke(Color.outline, lineWidth: 1))
             .padding(.top, 8)
 
             Text(engineHint)
@@ -485,7 +496,7 @@ struct StudioView: View {
                 let url = try Mp3Exporter.write(data, name: fileTitle)
                 exporting = false
                 model.toast("فایل ذخیره شد: " + url.lastPathComponent)
-                shareItem = ShareItem(url: url)
+                if !ShareHelper.present(url) { model.toast("باز کردن منوی اشتراک ممکن نشد.") }
             } catch {
                 exporting = false
                 model.toast("ساخت فایل ناموفق بود: " + error.localizedDescription)

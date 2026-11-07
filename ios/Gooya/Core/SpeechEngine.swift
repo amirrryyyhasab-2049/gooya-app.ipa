@@ -45,6 +45,7 @@ final class SpeechEngine: ObservableObject {
         onlineMode = settings.online
         playStartedAt = Date()
         activateAudioSession()
+        DebugLog.write("play: segments=\(segments.count) online=\(settings.online) persona=\(settings.personaId) start=\(startIndex)")
         let start = currentIndex
         runTask = Task { [self] in
             if settings.online {
@@ -104,6 +105,7 @@ final class SpeechEngine: ObservableObject {
     private func complete() {
         let elapsed = Int(Date().timeIntervalSince(playStartedAt) * 1000)
         let wasOnline = onlineMode
+        DebugLog.write("complete: elapsedMs=\(elapsed) online=\(wasOnline)")
         finish()
         onComplete?(wasOnline, elapsed)
     }
@@ -139,10 +141,13 @@ final class SpeechEngine: ObservableObject {
 
             let data: Data
             do {
+                DebugLog.write("segment \(i): fetch (\(seg.text.lengthU16) chars)")
                 data = try await fetchWithRetry(seg, settings)
+                DebugLog.write("segment \(i): got \(data.count) bytes")
                 consecutiveFailures = 0
             } catch {
                 if !alive(gen) { return }
+                DebugLog.write("segment \(i): fetch failed: \(error.localizedDescription)")
                 let m = error.localizedDescription
                 let connectionProblem = m.contains("403") || m.contains("resolve") || m.contains("Internet")
                     || m.contains("connect") || m.contains("network") || m.contains("زمان انتظار")
@@ -173,9 +178,11 @@ final class SpeechEngine: ObservableObject {
             if !alive(gen) { return }
             status = .playing
             do {
+                DebugLog.write("segment \(i): playing")
                 try await playData(data, gen)
             } catch {
                 if !alive(gen) { return }
+                DebugLog.write("segment \(i): play failed: \(error.localizedDescription)")
                 cache[cacheKey(seg, settings)] = nil
                 if !skippedNoticeShown {
                     skippedNoticeShown = true

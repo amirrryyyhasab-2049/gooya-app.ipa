@@ -137,7 +137,7 @@ struct TextsView: View {
                 .foregroundColor(.slate400)
                 .padding(.top, 6)
             HStack(spacing: 0) {
-                GButton(title: "▶  پخش در استودیو", kind: .filled(.indigo600), fontSize: 13, fullWidth: true) {
+                GButton(title: "پخش در استودیو", playGlyph: true, kind: .filled(.indigo600), fontSize: 13, fullWidth: true) {
                     model.openStudio(content: doc.content, title: doc.title, textId: doc.id)
                 }
                 GButton(title: "ویرایش", kind: .text(.indigo600)) { editing = doc }
@@ -283,7 +283,7 @@ struct HistoryView: View {
                 .foregroundColor(.slate500)
                 .padding(.top, 4)
             HStack(spacing: 0) {
-                GButton(title: "▶  پخش دوباره", kind: .tonal) {
+                GButton(title: "پخش دوباره", playGlyph: true, kind: .tonal) {
                     model.openStudio(content: item.content, title: item.title, textId: nil)
                 }
                 GButton(title: "حذف", kind: .text(.rose600)) { store.deleteHistory(id: item.id) }
@@ -338,6 +338,14 @@ struct HelpView: View {
                 GButton(title: "نصب دادهٔ صدا", kind: .tonal, fullWidth: true) {
                     model.toast("تنظیمات ← دسترسی‌پذیری ← محتوای گفتاری ← صداها")
                     openSettings()
+                }
+
+                GButton(title: "گزارش عیب‌یابی (اشتراک فایل)", icon: "ladybug", kind: .outlined(foreground: .indigo600, border: .outline), fullWidth: true) {
+                    if FileManager.default.fileExists(atPath: DebugLog.fileURL.path) {
+                        if !ShareHelper.present(DebugLog.fileURL) { model.toast("باز کردن منوی اشتراک ممکن نشد.") }
+                    } else {
+                        model.toast("هنوز گزارشی ثبت نشده است.")
+                    }
                 }
 
                 Text(statusText)
