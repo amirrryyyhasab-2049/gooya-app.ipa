@@ -4,7 +4,7 @@ import SwiftUI
 struct GooyaApp: App {
     var body: some Scene {
         WindowGroup {
-            StudioView()
+            RootView()
                 .environment(\.layoutDirection, .rightToLeft)
         }
     }

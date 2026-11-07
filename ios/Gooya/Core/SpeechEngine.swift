@@ -19,7 +19,10 @@ final class SpeechEngine: ObservableObject {
     private var runTask: Task<Void, Never>?
     private var cache: [String: Data] = [:]
     private var inFlight: [String: Task<Data, Error>] = [:]
-    private var onlineMode = true
+    @Published private(set) var onlineMode = true
+    /// پس از پایان طبیعی خواندن (نه خطا) صدا زده می‌شود: (آنلاین بود؟، مدت به میلی‌ثانیه)
+    var onComplete: (@MainActor (Bool, Int) -> Void)?
+    private var playStartedAt = Date()
 
     private let synthesizer = AVSpeechSynthesizer()
     private let deviceDelegate = DeviceSpeechDelegate()
@@ -40,6 +43,7 @@ final class SpeechEngine: ObservableObject {
         currentIndex = max(0, min(startIndex, max(0, segments.count - 1)))
         status = .loading
         onlineMode = settings.online
+        playStartedAt = Date()
         activateAudioSession()
         let start = currentIndex
         runTask = Task { [self] in
@@ -94,6 +98,14 @@ final class SpeechEngine: ObservableObject {
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .spokenAudio)
         try? session.setActive(true)
+    }
+
+    /// پایان طبیعی خواندن
+    private func complete() {
+        let elapsed = Int(Date().timeIntervalSince(playStartedAt) * 1000)
+        let wasOnline = onlineMode
+        finish()
+        onComplete?(wasOnline, elapsed)
     }
 
     private func finish() {
@@ -175,7 +187,7 @@ final class SpeechEngine: ObservableObject {
             i += 1
         }
 
-        if alive(gen) { finish() }
+        if alive(gen) { complete() }
     }
 
     private func playData(_ data: Data, _ gen: Int) async throws {
@@ -292,7 +304,7 @@ final class SpeechEngine: ObservableObject {
             await sleepPause(seg.pauseAfter, gen)
             i += 1
         }
-        if alive(gen) { finish() }
+        if alive(gen) { complete() }
     }
 
     // MARK: پیام خطا
