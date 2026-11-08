@@ -23,11 +23,16 @@ struct RootView: View {
                         .transition(.opacity)
                 }
 
-                DrawerView(width: drawerWidth)
-                    .frame(width: drawerWidth)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                    .offset(x: model.drawerOpen ? 0 : drawerWidth + 20)
-                    .allowsHitTesting(model.drawerOpen)
+                // منو در فضای فیزیکی (چپ‌به‌راست) جای‌گذاری می‌شود تا همیشه از لبهٔ راست باز و بسته شود
+                ZStack {
+                    DrawerView(width: drawerWidth)
+                        .environment(\.layoutDirection, .rightToLeft)
+                        .frame(width: drawerWidth)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .offset(x: model.drawerOpen ? 0 : drawerWidth + 24)
+                }
+                .environment(\.layoutDirection, .leftToRight)
+                .allowsHitTesting(model.drawerOpen)
 
                 if let toast = model.toastText {
                     VStack {

@@ -24,12 +24,13 @@ final class SpeechEngine: ObservableObject {
     var onComplete: (@MainActor (Bool, Int) -> Void)?
     private var playStartedAt = Date()
 
-    private let synthesizer = AVSpeechSynthesizer()
     private let deviceDelegate = DeviceSpeechDelegate()
-
-    init() {
-        synthesizer.delegate = deviceDelegate
-    }
+    private var deviceUsed = false
+    private lazy var synthesizer: AVSpeechSynthesizer = {
+        let s = AVSpeechSynthesizer()
+        s.delegate = deviceDelegate
+        return s
+    }()
 
     // MARK: کنترل‌ها
 
@@ -86,7 +87,7 @@ final class SpeechEngine: ObservableObject {
         runTask = nil
         player?.stop()
         player = nil
-        synthesizer.stopSpeaking(at: .immediate)
+        if deviceUsed { synthesizer.stopSpeaking(at: .immediate) }
         for task in inFlight.values { task.cancel() }
         inFlight.removeAll()
     }
@@ -285,6 +286,7 @@ final class SpeechEngine: ObservableObject {
             return
         }
         status = .playing
+        deviceUsed = true
         let p = settings.persona
         var i = start
         while i < segments.count {

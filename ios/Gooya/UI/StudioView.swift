@@ -150,6 +150,7 @@ struct StudioView: View {
                             }
                         }
                     }
+                    .environment(\.layoutDirection, .leftToRight)
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -295,6 +296,7 @@ struct StudioView: View {
                     ChipView(label: p.label, selected: p.id == settings.personaId) { settings.personaId = p.id }
                 }
             }
+            .environment(\.layoutDirection, .leftToRight)
             Text(persona.descriptionText)
                 .font(.vazir(13))
                 .foregroundColor(.slate500)

@@ -114,7 +114,8 @@ struct FlowLayout: Layout {
             lineHeight = max(lineHeight, size.height)
             width = max(width, x - spacing)
         }
-        return CGSize(width: width, height: y + lineHeight)
+        let finalWidth = proposal.width.map { $0.isFinite ? $0 : width } ?? width
+        return CGSize(width: finalWidth, height: y + lineHeight)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
@@ -197,6 +198,7 @@ struct GSlider: View {
                     }
             )
         }
+        .environment(\.layoutDirection, .leftToRight)
         .frame(height: max(32, haloRadius * 2))
     }
 
@@ -227,13 +229,39 @@ final class TextInserter {
     }
 }
 
-struct GooyaTextView: UIViewRepresentable {
+/// کادر ورودی چندخطی؛ متن راهنما با SwiftUI رسم می‌شود تا همیشه دیده شود
+struct GooyaTextView: View {
     @Binding var text: String
     var placeholder: String
     var fontSize: CGFloat = 18
     var lineMultiple: CGFloat = 1.7
     var minHeight: CGFloat = 200
     var inserter: TextInserter? = nil
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            GooyaTextViewRepresentable(text: $text, fontSize: fontSize, lineMultiple: lineMultiple,
+                                       minHeight: minHeight, inserter: inserter)
+            if text.isEmpty && !placeholder.isEmpty {
+                Text(placeholder)
+                    .font(.vazir(fontSize))
+                    .foregroundColor(.slate400)
+                    .lineSpacing(fontSize * (lineMultiple - 1))
+                    .multilineTextAlignment(.leading)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+}
+
+struct GooyaTextViewRepresentable: UIViewRepresentable {
+    @Binding var text: String
+    var fontSize: CGFloat
+    var lineMultiple: CGFloat
+    var minHeight: CGFloat
+    var inserter: TextInserter?
 
     private var attributes: [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
@@ -255,23 +283,6 @@ struct GooyaTextView: UIViewRepresentable {
         tv.autocorrectionType = .no
         tv.typingAttributes = attributes
         tv.attributedText = NSAttributedString(string: text, attributes: attributes)
-
-        let label = UILabel()
-        label.text = placeholder
-        label.font = UIFont.vazir(fontSize)
-        label.textColor = UIColor(hex: 0x94A3B8)
-        label.numberOfLines = 0
-        label.textAlignment = .natural
-        label.semanticContentAttribute = .forceRightToLeft
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.isHidden = !text.isEmpty
-        tv.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.topAnchor.constraint(equalTo: tv.topAnchor, constant: 14),
-            label.leadingAnchor.constraint(equalTo: tv.leadingAnchor, constant: 14),
-            label.widthAnchor.constraint(equalTo: tv.widthAnchor, constant: -28)
-        ])
-        context.coordinator.placeholderLabel = label
         inserter?.textView = tv
         return tv
     }
@@ -283,7 +294,6 @@ struct GooyaTextView: UIViewRepresentable {
             tv.attributedText = NSAttributedString(string: text, attributes: attributes)
             tv.typingAttributes = attributes
         }
-        context.coordinator.placeholderLabel?.isHidden = !text.isEmpty
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -295,14 +305,12 @@ struct GooyaTextView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     final class Coordinator: NSObject, UITextViewDelegate {
-        var parent: GooyaTextView
-        weak var placeholderLabel: UILabel?
+        var parent: GooyaTextViewRepresentable
 
-        init(_ parent: GooyaTextView) { self.parent = parent }
+        init(_ parent: GooyaTextViewRepresentable) { self.parent = parent }
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
-            placeholderLabel?.isHidden = !textView.text.isEmpty
         }
     }
 }
