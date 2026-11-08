@@ -118,7 +118,7 @@ struct DictEditSheet: View {
     @State private var diacritized: String
     @State private var note: String
     @State private var error: String?
-    @State private var inserter = TextInserter()
+    @StateObject private var inserter = TextInserter() // اصلاح: استفاده از StateObject برای پایداری مرجع اینسرتر
 
     init(data: DictSheetData, onSaved: @escaping () -> Void) {
         entryId = data.entryId
