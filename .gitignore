@@ -1,0 +1,6 @@
+ios/Gooya.xcodeproj/
+ios/Gooya/Info.plist
+ios/build/
+ios/build-sim/
+*.xcuserstate
+.DS_Store
