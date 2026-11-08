@@ -266,7 +266,8 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     private var attributes: [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = fontSize * (lineMultiple - 1)
-        style.alignment = .natural
+        style.alignment = .right
+        style.baseWritingDirection = .rightToLeft
         return [.font: UIFont.vazir(fontSize),
                 .foregroundColor: UIColor(hex: 0x0F172A),
                 .paragraphStyle: style]
@@ -280,6 +281,7 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         tv.textContainerInset = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
         tv.textContainer.lineFragmentPadding = 0
         tv.semanticContentAttribute = .forceRightToLeft
+        tv.textAlignment = .right
         tv.autocorrectionType = .no
         tv.typingAttributes = attributes
         tv.attributedText = NSAttributedString(string: text, attributes: attributes)
@@ -358,7 +360,8 @@ struct ReaderTextView: UIViewRepresentable {
         let result = NSMutableAttributedString()
         let style = NSMutableParagraphStyle()
         style.lineSpacing = 17 * 0.9
-        style.alignment = .natural
+        style.alignment = .right
+        style.baseWritingDirection = .rightToLeft
         for seg in segments {
             let isActive = active && seg.index == currentIndex
             let isDone = active && seg.index < currentIndex
@@ -466,6 +469,58 @@ struct DiacriticBar: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+}
+
+
+// MARK: - فیلد تک‌خطی راست‌به‌چپ (UITextField)
+
+struct GooyaTextField: UIViewRepresentable {
+    @Binding var text: String
+    var fontSize: CGFloat = 16
+
+    func makeUIView(context: Context) -> UITextField {
+        let tf = UITextField()
+        let style = NSMutableParagraphStyle()
+        style.alignment = .right
+        style.baseWritingDirection = .rightToLeft
+        tf.defaultTextAttributes = [.font: UIFont.vazir(fontSize),
+                                    .foregroundColor: UIColor(hex: 0x0F172A),
+                                    .paragraphStyle: style]
+        tf.textAlignment = .right
+        tf.semanticContentAttribute = .forceRightToLeft
+        tf.autocorrectionType = .no
+        tf.returnKeyType = .done
+        tf.delegate = context.coordinator
+        tf.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .editingChanged)
+        tf.text = text
+        return tf
+    }
+
+    func updateUIView(_ tf: UITextField, context: Context) {
+        context.coordinator.parent = self
+        if tf.text != text { tf.text = text }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextField, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? 240, height: 48)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: GooyaTextField
+
+        init(_ parent: GooyaTextField) { self.parent = parent }
+
+        @objc func changed(_ tf: UITextField) {
+            parent.text = tf.text ?? ""
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            textField.resignFirstResponder()
+            return true
         }
     }
 }
