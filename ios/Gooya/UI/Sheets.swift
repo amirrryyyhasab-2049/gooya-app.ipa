@@ -26,14 +26,15 @@ private struct DialogFrame<Content: View>: View {
                 if let error = error {
                     Text(error).font(.vazir(13)).foregroundColor(.rose600)
                 }
-                HStack(spacing: 4) {
+                HStack(spacing: 10) {
+                    GButton(title: saveTitle, kind: .filled(.emerald600)) { onSave() }
+                    GButton(title: "انصراف", kind: .filled(.rose600)) { dismiss() }
                     Spacer()
-                    GButton(title: "انصراف", kind: .text(.indigo600)) { dismiss() }
-                    GButton(title: saveTitle, kind: .text(.indigo600)) { onSave() }
                 }
             }
             .padding(24)
         }
+        .environment(\.layoutDirection, .rightToLeft)
         .background(Color.surfaceHigh.ignoresSafeArea())
         .presentationDetents([.medium, .large])
     }
@@ -78,8 +79,7 @@ struct TextEditSheet: View {
     var body: some View {
         DialogFrame(title: heading, error: error, onSave: save) {
             LabeledField("عنوان (اختیاری)") {
-                TextField("", text: $title)
-                    .font(.vazir(16))
+                GooyaTextField(text: $title)
                     .frame(height: 48)
             }
             LabeledField("متن") {
@@ -131,8 +131,7 @@ struct DictEditSheet: View {
     var body: some View {
         DialogFrame(title: entryId == nil ? "افزودن تلفظ به واژه‌نامه" : "ویرایش تلفظ", error: error, onSave: save) {
             LabeledField("واژه (بدون اعراب)") {
-                TextField("", text: $word)
-                    .font(.vazir(16))
+                GooyaTextField(text: $word)
                     .frame(height: 48)
             }
             DiacriticBar(inserter: inserter)
@@ -141,8 +140,7 @@ struct DictEditSheet: View {
                     .padding(.horizontal, -12)
             }
             LabeledField("یادداشت (اختیاری)") {
-                TextField("", text: $note)
-                    .font(.vazir(16))
+                GooyaTextField(text: $note)
                     .frame(height: 48)
             }
         }
