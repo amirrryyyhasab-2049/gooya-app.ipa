@@ -63,7 +63,7 @@ struct StudioView: View {
         }
         .task(id: StatsKey(text: text, title: title, pause: settings.pauseScale, rate: settings.rate, persona: settings.personaId)) {
             do { try await Task.sleep(nanoseconds: 250_000_000) } catch { return }
-            updateStats()
+            await updateStats()
         }
         .onChange(of: text) { newValue in
             hasMarks = Diacritizer.hasDiacritics(newValue)
@@ -399,14 +399,22 @@ struct StudioView: View {
         }
     }
 
-    private func updateStats() {
+    private func updateStats() async {
         let p = persona
-        let preview = Segmenter.segment(text, pauseScale: settings.pauseScale * p.pauseScale)
-        previewCount = preview.count
-        let est = Segmenter.estimateSeconds(preview, rate: settings.rate * p.rate)
-        var s = "\(Segmenter.faNum(Segmenter.countWords(text))) واژه · \(Segmenter.faNum(text.lengthU16)) نویسه · "
-        s += "\(Segmenter.faNum(preview.count)) قطعه · زمان تقریبی: \(Segmenter.formatDuration(est))"
-        if !title.isEmpty { s += " · " + title }
+        let t = text
+        let pause = settings.pauseScale * p.pauseScale
+        let rate = settings.rate * p.rate
+        let ttl = title
+        // محاسبهٔ قطعه‌ها روی نخ پس‌زمینه تا متن‌های طولانی رابط را قفل نکنند
+        let r = await Task.detached(priority: .utility) { () -> (Int, Double, Int) in
+            let preview = Segmenter.segment(t, pauseScale: pause)
+            return (preview.count, Segmenter.estimateSeconds(preview, rate: rate), Segmenter.countWords(t))
+        }.value
+        if Task.isCancelled { return }
+        previewCount = r.0
+        var s = "\(Segmenter.faNum(r.2)) واژه · \(Segmenter.faNum(t.lengthU16)) نویسه · "
+        s += "\(Segmenter.faNum(r.0)) قطعه · زمان تقریبی: \(Segmenter.formatDuration(r.1))"
+        if !ttl.isEmpty { s += " · " + ttl }
         statsText = s
     }
 
