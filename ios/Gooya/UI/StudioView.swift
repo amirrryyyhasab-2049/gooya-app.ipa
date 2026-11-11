@@ -129,9 +129,6 @@ struct StudioView: View {
             GooyaTextView(text: $text,
                           placeholder: "متن فارسی خود را این‌جا بنویسید یا بچسبانید… (بدون محدودیت واژه)",
                           inserter: inserter)
-                // اعمال جهت راست‌به‌راست و تراز مناسب برای جلوگیری از پرش مکان‌نما در متون فارسی
-                .environment(\.layoutDirection, .rightToLeft)
-                .multilineTextAlignment(.trailing)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.slate50))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.slate200, lineWidth: 1))
                 .padding(.top, 8)
