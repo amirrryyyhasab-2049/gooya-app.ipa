@@ -292,13 +292,9 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         context.coordinator.parent = self
         inserter?.textView = tv
-        
-        // اصلاح کلیدی: حفظ موقعیت مکان‌نما هنگام به‌روزرسانی متن
         if tv.text != text {
-            let selectedRange = tv.selectedTextRange
             tv.attributedText = NSAttributedString(string: text, attributes: attributes)
             tv.typingAttributes = attributes
-            tv.selectedTextRange = selectedRange
         }
     }
 
