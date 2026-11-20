@@ -268,9 +268,14 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         style.lineSpacing = fontSize * (lineMultiple - 1)
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
+        // جهت نوشتن RTL (embedding) روی خود نویسه‌ها؛ تا اسپیس و نویسه‌های خنثی هنگام تایپ با کیبورد انگلیسی
+        // (مثل BrowserStack یا شبیه‌ساز) جهت LTR نگیرند و نشانگر به ابتدای متن نپرد.
+        // rawValue راست‌به‌چپ = 1 و حالت embedding = 0 است.
+        let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
         return [.font: UIFont.vazir(fontSize),
                 .foregroundColor: UIColor(hex: 0x0F172A),
-                .paragraphStyle: style]
+                .paragraphStyle: style,
+                .writingDirection: rtl]
     }
 
     func makeUIView(context: Context) -> UITextView {
@@ -330,7 +335,8 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         /// اگر UIKit استیل تایپ را ریست کرده باشد (جهت پایه RTL گم شود)، دوباره برقرارش می‌کند.
         private func ensureRTLTypingAttributes(_ textView: UITextView) {
             let style = textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
-            if style?.baseWritingDirection != .rightToLeft {
+            let dir = (textView.typingAttributes[.writingDirection] as? [NSNumber])?.first?.intValue
+            if style?.baseWritingDirection != .rightToLeft || dir != NSWritingDirection.rightToLeft.rawValue {
                 textView.typingAttributes = parent.attributes
             }
         }
