@@ -256,6 +256,19 @@ struct GooyaTextView: View {
     }
 }
 
+/// UITextView با استیل تایپ قفل‌شدهٔ RTL.
+/// کیبورد هنگام تعویض زبان (مثلاً انگلیسی) typingAttributes را LTR می‌کند و نویسهٔ خنثی
+/// (اسپیس/Enter/…) همان لحظه با جهت LTR در storage ثبت می‌شود؛ اصلاحِ بعد از درج فایده ندارد.
+/// این subclass نمی‌گذارد UIKit اصلاً استیل غیر RTL برای تایپ بگذارد.
+final class GooyaRTLTextView: UITextView {
+    var forcedTypingAttributes: [NSAttributedString.Key: Any]?
+
+    override var typingAttributes: [NSAttributedString.Key: Any] {
+        get { forcedTypingAttributes ?? super.typingAttributes }
+        set { super.typingAttributes = forcedTypingAttributes ?? newValue }
+    }
+}
+
 struct GooyaTextViewRepresentable: UIViewRepresentable {
     @Binding var text: String
     var fontSize: CGFloat
@@ -269,8 +282,7 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
         // جهت نوشتن RTL (embedding) روی خود نویسه‌ها؛ تا اسپیس و نویسه‌های خنثی هنگام تایپ با کیبورد انگلیسی
-        // (مثل BrowserStack یا شبیه‌ساز) جهت LTR نگیرند و نشانگر به ابتدای متن نپرد.
-        // rawValue راست‌به‌چپ = 1 و حالت embedding = 0 است.
+        // جهت LTR نگیرند و نشانگر به ابتدای متن نپرد. rawValue راست‌به‌چپ = 1 و embedding = 0.
         let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
         return [.font: UIFont.vazir(fontSize),
                 .foregroundColor: UIColor(hex: 0x0F172A),
@@ -278,8 +290,8 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
                 .writingDirection: rtl]
     }
 
-    func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+    func makeUIView(context: Context) -> GooyaRTLTextView {
+        let tv = GooyaRTLTextView()
         tv.delegate = context.coordinator
         tv.backgroundColor = .clear
         tv.isScrollEnabled = false
@@ -288,15 +300,24 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         tv.semanticContentAttribute = .forceRightToLeft
         tv.textAlignment = .right
         tv.autocorrectionType = .no
+        tv.smartInsertDeleteType = .no      // اسپیس‌های اضافهٔ خودکار اطراف Paste خاموش
+        if #available(iOS 17.0, *) {
+            tv.inlinePredictionType = .no   // پیش‌بینی درون‌خطی مسیر marked-text باز نکند
+        }
+        tv.forcedTypingAttributes = attributes
         tv.typingAttributes = attributes
         tv.attributedText = NSAttributedString(string: text, attributes: attributes)
+        // متن از قبل موجود (draft/نمونه): نشانگر به انتهای منطقی (سمت چپ)، نه index 0 (لبهٔ راست)
+        let end = (text as NSString).length
+        tv.selectedRange = NSRange(location: end, length: 0)
         inserter?.textView = tv
         return tv
     }
 
-    func updateUIView(_ tv: UITextView, context: Context) {
+    func updateUIView(_ tv: GooyaRTLTextView, context: Context) {
         context.coordinator.parent = self
         inserter?.textView = tv
+        tv.forcedTypingAttributes = attributes
         if tv.text != text {
             // موقعیت نشانگر را نگه می‌داریم (اگر ویرایشگر فعال است) تا با جایگزینی متن به ابتدا نپرد؛
             // در غیر این‌صورت (نمونه متن، اعراب‌گذاری، پاک‌کردن) نشانگر در انتهای منطقی متن می‌ماند.
@@ -310,7 +331,7 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         }
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: GooyaRTLTextView, context: Context) -> CGSize? {
         let width = proposal.width ?? 320
         let fit = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         return CGSize(width: width, height: max(minHeight, fit.height))
@@ -325,20 +346,24 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
-            ensureRTLTypingAttributes(textView)
         }
 
-        func textViewDidChangeSelection(_ textView: UITextView) {
-            ensureRTLTypingAttributes(textView)
-        }
-
-        /// اگر UIKit استیل تایپ را ریست کرده باشد (جهت پایه RTL گم شود)، دوباره برقرارش می‌کند.
-        private func ensureRTLTypingAttributes(_ textView: UITextView) {
-            let style = textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
-            let dir = (textView.typingAttributes[.writingDirection] as? [NSNumber])?.first?.intValue
-            if style?.baseWritingDirection != .rightToLeft || dir != NSWritingDirection.rightToLeft.rawValue {
-                textView.typingAttributes = parent.attributes
-            }
+        /// کمربند دوم: هر درج ساده (تایپ، اسپیس، Enter، نیم‌فاصله، Paste، دکمه‌های اعراب)
+        /// مستقیماً با استیل RTL خودمان در storage نوشته می‌شود — حتی اگر UIKit بخواهد
+        /// استیل کیبورد را به نویسهٔ تازه بدهد. متن تغییری نمی‌کند؛ فقط استیل همان نویسه(ها).
+        /// حذف و marked text (دیکته/ترکیب) به مسیر خود UIKit سپرده می‌شوند؛ آنجا subclass
+        /// استیل تایپ را RTL نگه می‌دارد.
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
+                      replacementText text: String) -> Bool {
+            guard !text.isEmpty, textView.markedTextRange == nil else { return true }
+            textView.textStorage.replaceCharacters(
+                in: range, with: NSAttributedString(string: text, attributes: parent.attributes))
+            let caret = range.location + (text as NSString).length
+            textView.selectedRange = NSRange(location: caret, length: 0)
+            textView.typingAttributes = parent.attributes
+            textView.scrollRangeToVisible(textView.selectedRange)
+            parent.text = textView.text
+            return false
         }
     }
 }
