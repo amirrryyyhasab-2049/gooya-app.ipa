@@ -107,11 +107,23 @@ struct StudioView: View {
 
     // MARK: - کارت ویرایشگر
 
+    private static let barFirstID = "bar-first"
+
+    /// فرض: UnitPoint جهت‌دار نیست و لبهٔ شروع RTL همان لبهٔ راست (.trailing) است.
+    /// اگر در تست نوار به‌جای راست روی چپ رفت، anchor را به .leading عوض کن.
+    private func scrollBarToStart(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            proxy.scrollTo(Self.barFirstID, anchor: .trailing)
+        }
+    }
+
     private var editorCard: some View {
         VStack(alignment: .leading, spacing: 0) {
+            ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     GButton(title: "اعراب‌گذاری خودکار", icon: "plus", kind: .filled(.emerald600)) { runDiacritize() }
+                        .id(Self.barFirstID)
                     if hasMarks {
                         GButton(title: "حذف اعراب", kind: .text(.indigo600)) { text = Diacritizer.strip(text) }
                     }
@@ -120,6 +132,10 @@ struct StudioView: View {
                     GButton(title: "ذخیرهٔ متن", kind: .tonal) { saveTapped() }
                     GButton(title: "پاک کردن", kind: .text(.slate500)) { clearAll() }
                 }
+            }
+            // مثل HorizontalScrollView اندروید در RTL: نوار همیشه از لبهٔ راست (اولین دکمه) شروع شود
+            .onAppear { scrollBarToStart(proxy) }
+            .onChange(of: hasMarks) { _ in scrollBarToStart(proxy) }
             }
 
             if showDiacriticBar {
