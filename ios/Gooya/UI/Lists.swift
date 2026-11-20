@@ -245,21 +245,21 @@ struct HistoryView: View {
     var body: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 0) {
-                if !store.history.isEmpty {
+                if !store.visibleHistory.isEmpty {
                     GButton(title: "پاک‌کردن همه", kind: .text(.rose600)) { confirmClear = true }
                         .padding(.leading, 8)
                         .padding(.top, 4)
                 }
                 ScrollView {
                     LazyVStack(spacing: 10) {
-                        ForEach(store.history) { item in row(item) }
+                        ForEach(store.visibleHistory) { item in row(item) }
                     }
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     .padding(.bottom, 96)
                 }
             }
-            if store.history.isEmpty {
+            if store.visibleHistory.isEmpty {
                 EmptyState(icon: "🕘", title: "تاریخچه خالی است",
                            desc: "وقتی متنی را تا پایان بشنوید، این‌جا ثبت می‌شود.")
             }
