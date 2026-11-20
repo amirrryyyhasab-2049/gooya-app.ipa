@@ -44,6 +44,12 @@ final class Store: ObservableObject {
     @Published private(set) var texts: [TextDoc] = []
     @Published private(set) var dictionary: [DictEntry] = []
     @Published private(set) var history: [HistoryItem] = []
+
+    /// حداکثر ردیف تاریخچه در رابط (مثل limit 200 در listHistory اندروید)؛ رکوردهای قدیمی‌تر در فایل می‌مانند
+    static let historyDisplayLimit = 200
+
+    /// ۲۰۰ رکورد جدیدتر، مرتب بر اساس createdAt نزولی (معادل created_at DESC)
+    var visibleHistory: [HistoryItem] { Array(history.prefix(Store.historyDisplayLimit)) }
     private var nextId = 1
 
     private let fileURL: URL
@@ -91,7 +97,6 @@ final class Store: ObservableObject {
         }
         dictionary.sort { $0.updatedAt > $1.updatedAt }
         history.sort { $0.createdAt > $1.createdAt }
-        if history.count > 200 { history = Array(history.prefix(200)) }
     }
 
     private func save() {
