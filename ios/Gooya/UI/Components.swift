@@ -263,7 +263,7 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     var minHeight: CGFloat
     var inserter: TextInserter?
 
-    private var attributes: [NSAttributedString.Key: Any] {
+    var attributes: [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = fontSize * (lineMultiple - 1)
         style.alignment = .right
@@ -293,8 +293,15 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         context.coordinator.parent = self
         inserter?.textView = tv
         if tv.text != text {
+            // موقعیت نشانگر را نگه می‌داریم (اگر ویرایشگر فعال است) تا با جایگزینی متن به ابتدا نپرد؛
+            // در غیر این‌صورت (نمونه متن، اعراب‌گذاری، پاک‌کردن) نشانگر در انتهای منطقی متن می‌ماند.
+            let oldRange = tv.selectedRange
+            let wasEditing = tv.isFirstResponder
             tv.attributedText = NSAttributedString(string: text, attributes: attributes)
             tv.typingAttributes = attributes
+            let len = (text as NSString).length
+            let loc = wasEditing ? min(oldRange.location, len) : len
+            tv.selectedRange = NSRange(location: loc, length: 0)
         }
     }
 
@@ -313,6 +320,19 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
+            ensureRTLTypingAttributes(textView)
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            ensureRTLTypingAttributes(textView)
+        }
+
+        /// اگر UIKit استیل تایپ را ریست کرده باشد (جهت پایه RTL گم شود)، دوباره برقرارش می‌کند.
+        private func ensureRTLTypingAttributes(_ textView: UITextView) {
+            let style = textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
+            if style?.baseWritingDirection != .rightToLeft {
+                textView.typingAttributes = parent.attributes
+            }
         }
     }
 }
