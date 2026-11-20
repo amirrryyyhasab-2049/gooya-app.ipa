@@ -268,15 +268,14 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         style.lineSpacing = fontSize * (lineMultiple - 1)
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
-
-        // جهت را در سطح پاراگراف تعیین می‌کنیم؛ از تحمیل writingDirection
-        // روی تک‌تک نویسه‌ها خودداری می‌کنیم تا متن ترکیبی فارسی/انگلیسی
-        // و نویسه‌های خنثی مثل فاصله، رفتار طبیعی‌تری داشته باشند.
-        return [
-            .font: UIFont.vazir(fontSize),
-            .foregroundColor: UIColor(hex: 0x0F172A),
-            .paragraphStyle: style
-        ]
+        // جهت نوشتن RTL (embedding) روی خود نویسه‌ها؛ تا اسپیس و نویسه‌های خنثی هنگام تایپ با کیبورد انگلیسی
+        // (مثل BrowserStack یا شبیه‌ساز) جهت LTR نگیرند و نشانگر به ابتدای متن نپرد.
+        // rawValue راست‌به‌چپ = 1 و حالت embedding = 0 است.
+        let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
+        return [.font: UIFont.vazir(fontSize),
+                .foregroundColor: UIColor(hex: 0x0F172A),
+                .paragraphStyle: style,
+                .writingDirection: rtl]
     }
 
     func makeUIView(context: Context) -> UITextView {
@@ -298,37 +297,17 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         context.coordinator.parent = self
         inserter?.textView = tv
-
-        // اگر متن خود UITextView با Binding یکی است، هیچ کاری نکن.
-        // این حالت معمولِ تایپ کاربر است؛ جایگزینی دوباره متن در این مرحله
-        // می‌تواند مکان‌نما و انتخاب متن را مختل کند.
-        guard tv.text != text else { return }
-
-        let wasEditing = tv.isFirstResponder
-        let oldSelection = tv.selectedRange
-        let newAttributedText = NSAttributedString(
-            string: text,
-            attributes: attributes
-        )
-
-        tv.attributedText = newAttributedText
-
-        let newLength = (text as NSString).length
-        let location = wasEditing
-            ? min(max(0, oldSelection.location), newLength)
-            : newLength
-        let availableLength = max(0, newLength - location)
-        let selectionLength = wasEditing
-            ? min(max(0, oldSelection.length), availableLength)
-            : 0
-
-        tv.selectedRange = NSRange(
-            location: location,
-            length: selectionLength
-        )
-
-        // typingAttributes برای متن جدیدی که بعد از جایگزینی تایپ می‌شود.
-        tv.typingAttributes = attributes
+        if tv.text != text {
+            // موقعیت نشانگر را نگه می‌داریم (اگر ویرایشگر فعال است) تا با جایگزینی متن به ابتدا نپرد؛
+            // در غیر این‌صورت (نمونه متن، اعراب‌گذاری، پاک‌کردن) نشانگر در انتهای منطقی متن می‌ماند.
+            let oldRange = tv.selectedRange
+            let wasEditing = tv.isFirstResponder
+            tv.attributedText = NSAttributedString(string: text, attributes: attributes)
+            tv.typingAttributes = attributes
+            let len = (text as NSString).length
+            let loc = wasEditing ? min(oldRange.location, len) : len
+            tv.selectedRange = NSRange(location: loc, length: 0)
+        }
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -342,14 +321,24 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: GooyaTextViewRepresentable
 
-        init(_ parent: GooyaTextViewRepresentable) {
-            self.parent = parent
-        }
+        init(_ parent: GooyaTextViewRepresentable) { self.parent = parent }
 
         func textViewDidChange(_ textView: UITextView) {
-            // فقط Binding را به‌روز می‌کنیم؛ در زمان تغییر انتخاب یا حرکت
-            // Cursor، typingAttributes را بازنویسی نمی‌کنیم.
             parent.text = textView.text
+            ensureRTLTypingAttributes(textView)
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            ensureRTLTypingAttributes(textView)
+        }
+
+        /// اگر UIKit استیل تایپ را ریست کرده باشد (جهت پایه RTL گم شود)، دوباره برقرارش می‌کند.
+        private func ensureRTLTypingAttributes(_ textView: UITextView) {
+            let style = textView.typingAttributes[.paragraphStyle] as? NSParagraphStyle
+            let dir = (textView.typingAttributes[.writingDirection] as? [NSNumber])?.first?.intValue
+            if style?.baseWritingDirection != .rightToLeft || dir != NSWritingDirection.rightToLeft.rawValue {
+                textView.typingAttributes = parent.attributes
+            }
         }
     }
 }
