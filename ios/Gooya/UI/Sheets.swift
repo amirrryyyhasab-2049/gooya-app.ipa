@@ -134,11 +134,11 @@ struct DictEditSheet: View {
                 GooyaTextField(text: $word)
                     .frame(height: 48)
             }
-            DiacriticBar(inserter: inserter)
             LabeledField("تلفظ درست (با اعراب)") {
                 GooyaTextView(text: $diacritized, placeholder: "", fontSize: 20, lineMultiple: 1.3, minHeight: 52, inserter: inserter)
                     .padding(.horizontal, -12)
             }
+            DiacriticKeyBar(inserter: inserter)
             LabeledField("یادداشت (اختیاری)") {
                 GooyaTextField(text: $note)
                     .frame(height: 48)
