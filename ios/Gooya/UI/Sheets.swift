@@ -7,7 +7,7 @@ private struct DialogFrame<Content: View>: View {
     let error: String?
     let onSave: () -> Void
     let content: Content
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dialogDismiss) private var dismiss
 
     init(title: String, saveTitle: String = "ذخیره", error: String?, onSave: @escaping () -> Void,
          @ViewBuilder content: () -> Content) {
@@ -19,25 +19,22 @@ private struct DialogFrame<Content: View>: View {
     }
 
     var body: some View {
-        ScrollView {
+        DialogScroll {
             VStack(alignment: .leading, spacing: 14) {
-                // عنوان و دکمه‌ها مثل MaterialAlertDialog: عنوان ۲۴ ساده، دکمه‌های متنی (Text Button) به رنگ primary
-                Text(title).font(.vazir(24)).foregroundColor(.slate900)
+                Text(title).font(.vazir(20, bold: true)).foregroundColor(.slate900)
                 content
                 if let error = error {
                     Text(error).font(.vazir(13)).foregroundColor(.rose600)
                 }
-                HStack(spacing: 4) {
+                HStack(spacing: 10) {
+                    GButton(title: saveTitle, kind: .filled(.emerald600)) { onSave() }
+                    GButton(title: "انصراف", kind: .filled(.rose600)) { dismiss() }
                     Spacer()
-                    GButton(title: "انصراف", kind: .text(.indigo600)) { dismiss() }
-                    GButton(title: saveTitle, kind: .text(.indigo600)) { onSave() }
                 }
             }
             .padding(24)
         }
         .environment(\.layoutDirection, .rightToLeft)
-        .background(Color.surfaceHigh.ignoresSafeArea())
-        .presentationDetents([.medium, .large])
     }
 }
 
@@ -68,7 +65,7 @@ struct TextEditSheet: View {
     @State private var title: String
     @State private var content: String
     @State private var error: String?
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dialogDismiss) private var dismiss
 
     init(heading: String, title: String, content: String, onSave: @escaping (String, String) -> Void) {
         self.heading = heading
@@ -107,7 +104,7 @@ struct DictSheetData: Identifiable {
 /// دیالوگ افزودن/ویرایش تلفظ واژه (dialog_dict) با نوار علامت‌های اعراب
 struct DictEditSheet: View {
     @EnvironmentObject var store: Store
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dialogDismiss) private var dismiss
     let entryId: Int?
     let onSaved: () -> Void
     @State private var word: String
