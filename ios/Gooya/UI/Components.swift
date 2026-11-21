@@ -256,10 +256,55 @@ struct GooyaTextView: View {
     }
 }
 
-/// UITextView با استیل تایپ قفل‌شدهٔ RTL.
-/// کیبورد هنگام تعویض زبان (مثلاً انگلیسی) typingAttributes را LTR می‌کند و نویسهٔ خنثی
-/// (اسپیس/Enter/…) همان لحظه با جهت LTR در storage ثبت می‌شود؛ اصلاحِ بعد از درج فایده ندارد.
-/// این subclass نمی‌گذارد UIKit اصلاً استیل غیر RTL برای تایپ بگذارد.
+/// تشخیص جهت نوشتن برای متن دوزبانه (فارسی + انگلیسی).
+/// قاعده: نویسهٔ «قوی» جهت را تعیین می‌کند؛ نویسه‌های خنثی (اسپیس، عدد لاتین، علائم)
+/// جهت ندارند و باید از زمینهٔ اطراف مکان‌نما ارث ببرند — وگرنه اسپیسِ بین دو کلمهٔ انگلیسی
+/// RTL می‌شود و ترتیب کلمات انگلیسی به‌هم می‌ریزد.
+enum GooyaWritingDirection {
+    case rtl, ltr
+
+    /// جهت اولین نویسهٔ قوی؛ nil اگر رشته فقط خنثی باشد.
+    static func strong(of string: String) -> GooyaWritingDirection? {
+        for s in string.unicodeScalars {
+            if let d = strong(of: s) { return d }
+        }
+        return nil
+    }
+
+    static func strong(of s: Unicode.Scalar) -> GooyaWritingDirection? {
+        let v = s.value
+        // عبری، عربی/فارسی (شامل ارقام فارسی و «،» و «؟»)، عربی گسترده، فرم‌های ارائه
+        if (0x0590...0x05FF).contains(v) || (0x0600...0x06FF).contains(v) ||
+            (0x0750...0x077F).contains(v) || (0x08A0...0x08FF).contains(v) ||
+            (0xFB1D...0xFDFF).contains(v) || (0xFE70...0xFEFF).contains(v) {
+            return .rtl
+        }
+        if CharacterSet.letters.contains(s) { return .ltr }   // لاتین و بقیهٔ الفباها
+        return nil                                            // عدد لاتین، اسپیس، علائم → خنثی
+    }
+
+    /// جهت زمینه در محل مکان‌نما: آخرین نویسهٔ قویِ قبل از آن؛ اگر نبود، RTL (پیش‌فرض اپ).
+    /// اسکن به ۲۰۴۸ نویسهٔ آخر محدود است تا متن‌های خیلی بلند کند نشوند.
+    static func context(in text: NSString, at location: Int) -> GooyaWritingDirection {
+        let loc = min(max(0, location), text.length)
+        let start = max(0, loc - 2048)
+        let prefix = text.substring(with: NSRange(location: start, length: loc - start))
+        for s in prefix.unicodeScalars.reversed() {
+            if let d = strong(of: s) { return d }
+        }
+        return .rtl
+    }
+
+    /// embedding (نه override): حروف انگلیسی داخل جزیرهٔ LTR هم چپ‌به‌راست می‌مانند.
+    var embedding: [NSNumber] {
+        [NSNumber(value: self == .rtl ? NSWritingDirection.rightToLeft.rawValue
+                                      : NSWritingDirection.leftToRight.rawValue)]
+    }
+}
+
+/// UITextView با استیل تایپ قفل‌شده.
+/// کیبورد هنگام تعویض زبان typingAttributes را عوض می‌کند؛ این subclass نمی‌گذارد UIKit
+/// استیل دلخواه بگذارد. جهتِ قفل‌شده توسط Coordinator بر اساس زمینهٔ مکان‌نما به‌روز می‌شود.
 final class GooyaRTLTextView: UITextView {
     var forcedTypingAttributes: [NSAttributedString.Key: Any]?
 
@@ -276,18 +321,39 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     var minHeight: CGFloat
     var inserter: TextInserter?
 
-    var attributes: [NSAttributedString.Key: Any] {
+    /// پاراگراف همیشه RTL و راست‌چین؛ فقط embedding نویسه‌ها بر اساس جهت متن عوض می‌شود.
+    func attributes(for direction: GooyaWritingDirection) -> [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = fontSize * (lineMultiple - 1)
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
-        // جهت نوشتن RTL (embedding) روی خود نویسه‌ها؛ تا اسپیس و نویسه‌های خنثی هنگام تایپ با کیبورد انگلیسی
-        // جهت LTR نگیرند و نشانگر به ابتدای متن نپرد. rawValue راست‌به‌چپ = 1 و embedding = 0.
-        let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
         return [.font: UIFont.vazir(fontSize),
                 .foregroundColor: UIColor(hex: 0x0F172A),
                 .paragraphStyle: style,
-                .writingDirection: rtl]
+                .writingDirection: direction.embedding]
+    }
+
+    /// استیل‌دهی متن با حفظ جزیره‌های LTR (انگلیسی) داخل پاراگراف RTL.
+    /// نویسه‌های خنثی به رشتهٔ جهت‌دارِ قبل از خود می‌چسبند؛ خنثی‌های ابتدای رشته
+    /// جهت `initial` را می‌گیرند (برای درج = جهت متن قبل از مکان‌نما، برای کل سند = RTL).
+    func styled(_ string: String, initial: GooyaWritingDirection = .rtl) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        var run = ""
+        var runDir = initial
+        for s in string.unicodeScalars {
+            if let d = GooyaWritingDirection.strong(of: s) {
+                if !run.isEmpty && d != runDir {
+                    result.append(NSAttributedString(string: run, attributes: attributes(for: runDir)))
+                    run = ""
+                }
+                runDir = d
+            }
+            run.unicodeScalars.append(s)
+        }
+        if !run.isEmpty {
+            result.append(NSAttributedString(string: run, attributes: attributes(for: runDir)))
+        }
+        return result
     }
 
     func makeUIView(context: Context) -> GooyaRTLTextView {
@@ -304,12 +370,13 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
         if #available(iOS 17.0, *) {
             tv.inlinePredictionType = .no   // پیش‌بینی درون‌خطی مسیر marked-text باز نکند
         }
-        tv.forcedTypingAttributes = attributes
-        tv.typingAttributes = attributes
-        tv.attributedText = NSAttributedString(string: text, attributes: attributes)
-        // متن از قبل موجود (draft/نمونه): نشانگر به انتهای منطقی (سمت چپ)، نه index 0 (لبهٔ راست)
+        tv.attributedText = styled(text)
+        // متن از قبل موجود (draft/نمونه): نشانگر به انتهای منطقی، نه index 0 (لبهٔ راست)
         let end = (text as NSString).length
         tv.selectedRange = NSRange(location: end, length: 0)
+        let dir = GooyaWritingDirection.context(in: text as NSString, at: end)
+        tv.forcedTypingAttributes = attributes(for: dir)
+        tv.typingAttributes = attributes(for: dir)
         inserter?.textView = tv
         return tv
     }
@@ -317,17 +384,18 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
     func updateUIView(_ tv: GooyaRTLTextView, context: Context) {
         context.coordinator.parent = self
         inserter?.textView = tv
-        tv.forcedTypingAttributes = attributes
         if tv.text != text {
             // موقعیت نشانگر را نگه می‌داریم (اگر ویرایشگر فعال است) تا با جایگزینی متن به ابتدا نپرد؛
             // در غیر این‌صورت (نمونه متن، اعراب‌گذاری، پاک‌کردن) نشانگر در انتهای منطقی متن می‌ماند.
             let oldRange = tv.selectedRange
             let wasEditing = tv.isFirstResponder
-            tv.attributedText = NSAttributedString(string: text, attributes: attributes)
-            tv.typingAttributes = attributes
+            tv.attributedText = styled(text)
             let len = (text as NSString).length
             let loc = wasEditing ? min(oldRange.location, len) : len
             tv.selectedRange = NSRange(location: loc, length: 0)
+            let dir = GooyaWritingDirection.context(in: text as NSString, at: loc)
+            tv.forcedTypingAttributes = attributes(for: dir)
+            tv.typingAttributes = attributes(for: dir)
         }
     }
 
@@ -348,19 +416,34 @@ struct GooyaTextViewRepresentable: UIViewRepresentable {
             parent.text = textView.text
         }
 
-        /// کمربند دوم: هر درج ساده (تایپ، اسپیس، Enter، نیم‌فاصله، Paste، دکمه‌های اعراب)
-        /// مستقیماً با استیل RTL خودمان در storage نوشته می‌شود — حتی اگر UIKit بخواهد
-        /// استیل کیبورد را به نویسهٔ تازه بدهد. متن تغییری نمی‌کند؛ فقط استیل همان نویسه(ها).
-        /// حذف و marked text (دیکته/ترکیب) به مسیر خود UIKit سپرده می‌شوند؛ آنجا subclass
-        /// استیل تایپ را RTL نگه می‌دارد.
+        /// کاربر مکان‌نما را جابه‌جا کرد (لمس/انتخاب) → جهت تایپ بعدی از زمینهٔ همان نقطه.
+        /// مثلاً مکان‌نما وسط جملهٔ انگلیسی → اسپیس بعدی LTR می‌ماند و کنار همان کلمه می‌ایستد.
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            guard let tv = textView as? GooyaRTLTextView else { return }
+            let dir = GooyaWritingDirection.context(in: (tv.text ?? "") as NSString,
+                                                    at: tv.selectedRange.location)
+            tv.forcedTypingAttributes = parent.attributes(for: dir)
+        }
+
+        /// هر درج ساده (تایپ، اسپیس، Enter، نیم‌فاصله، Paste، دکمه‌های اعراب) با استیل
+        /// جهت‌دارِ خودمان در storage نوشته می‌شود: کلمهٔ انگلیسی جزیرهٔ LTR، فارسی RTL،
+        /// و خنثی‌ها (اسپیس/علائم/عدد لاتین) جهت را از متن قبل از مکان‌نما ارث می‌برند.
+        /// حذف و marked text (دیکته/ترکیب) به مسیر UIKit سپرده می‌شوند؛ آنجا subclass
+        /// استیل تایپ را با جهت فعلی نگه می‌دارد.
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
                       replacementText text: String) -> Bool {
             guard !text.isEmpty, textView.markedTextRange == nil else { return true }
-            textView.textStorage.replaceCharacters(
-                in: range, with: NSAttributedString(string: text, attributes: parent.attributes))
+            // جهت زمینه BEFORE درج: خنثی‌های ابتدای درج (مثل اسپیس) همین جهت را می‌گیرند.
+            let baseDir = GooyaWritingDirection.context(in: (textView.text ?? "") as NSString,
+                                                        at: range.location)
+            textView.textStorage.replaceCharacters(in: range, with: parent.styled(text, initial: baseDir))
             let caret = range.location + (text as NSString).length
             textView.selectedRange = NSRange(location: caret, length: 0)
-            textView.typingAttributes = parent.attributes
+            // جهت تایپ بعدی = آخرین نویسهٔ قویِ قبل از مکان‌نمای جدید (شامل همین درج)
+            let dir = GooyaWritingDirection.context(in: (textView.text ?? "") as NSString, at: caret)
+            let attrs = parent.attributes(for: dir)
+            if let tv = textView as? GooyaRTLTextView { tv.forcedTypingAttributes = attrs }
+            textView.typingAttributes = attrs
             textView.scrollRangeToVisible(textView.selectedRange)
             parent.text = textView.text
             return false
