@@ -56,7 +56,8 @@ struct FabButton: View {
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.indigo600))
                 .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStateStyle(shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                                     layer: .white, pressedOpacity: 0.16))
         .accessibilityLabel("افزودن")
         .padding(20)
     }
@@ -75,16 +76,23 @@ struct TextsView: View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 LazyVStack(spacing: 10) {
-                    ForEach(store.texts) { doc in row(doc) }
+                    ForEach(store.texts) { doc in
+                        row(doc)
+                            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)),
+                                                    removal: .opacity.combined(with: .scale(scale: 0.95))))
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
                 .padding(.bottom, 96)
+                // مثل انیمیشن‌های پیش‌فرض RecyclerView: افزودن، حذف و جابه‌جایی کارت‌ها نرم است
+                .animation(.easeInOut(duration: 0.28), value: store.texts.map { $0.id })
             }
             if store.texts.isEmpty {
                 EmptyState(icon: "📝", title: "هنوز متنی ذخیره نکرده‌اید",
                            desc: "متن‌های پرکاربردتان را ذخیره کنید تا با یک ضربه پخش شوند.")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity)
             }
             FabButton { creating = true }
         }
@@ -98,14 +106,10 @@ struct TextsView: View {
                 store.updateText(id: doc.id, title: t, content: c)
             }
         }
-        .alert("حذف متن", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
-            Button("انصراف", role: .cancel) { deleting = nil }
-            Button("حذف", role: .destructive) {
-                if let d = deleting { store.deleteText(id: d.id) }
-                deleting = nil
+        .materialDialog(item: $deleting) { doc in
+            ConfirmDialog(title: "حذف متن", message: "«" + doc.title + "» حذف شود؟") {
+                withAnimation(.easeInOut(duration: 0.28)) { store.deleteText(id: doc.id) }
             }
-        } message: {
-            Text("«" + (deleting?.title ?? "") + "» حذف شود؟")
         }
     }
 
@@ -121,9 +125,11 @@ struct TextsView: View {
                     Text(doc.favorite ? "★" : "☆")
                         .font(.system(size: 24))
                         .foregroundColor(doc.favorite ? Color(hex: 0xF59E0B) : .slate400)
+                        .scaleEffect(doc.favorite ? 1.0 : 0.92)
                         .frame(width: 40, height: 40)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.55), value: doc.favorite)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressStateStyle(shape: Circle(), layer: .slate400, pressedOpacity: 0.2))
             }
             Text(Store.snippet(doc.content, max: 160))
                 .font(.vazir(13))
@@ -137,11 +143,11 @@ struct TextsView: View {
                 .foregroundColor(.slate400)
                 .padding(.top, 6)
             HStack(spacing: 0) {
-                GButton(title: "پخش در استودیو", playGlyph: true, kind: .filled(.indigo600), fontSize: 13, fullWidth: true) {
+                MButton(title: "پخش در استودیو", playGlyph: true, kind: .filled(.indigo600), fontSize: 13, fullWidth: true) {
                     model.openStudio(content: doc.content, title: doc.title, textId: doc.id)
                 }
-                GButton(title: "ویرایش", kind: .text(.indigo600)) { editing = doc }
-                GButton(title: "حذف", kind: .text(.rose600)) { deleting = doc }
+                MButton(title: "ویرایش", kind: .text(.indigo600)) { editing = doc }
+                MButton(title: "حذف", kind: .text(.rose600)) { deleting = doc }
             }
             .padding(.top, 8)
         }
