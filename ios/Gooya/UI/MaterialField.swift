@@ -26,6 +26,9 @@ struct MaterialUITextField: UIViewRepresentable {
         let style = NSMutableParagraphStyle()
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
+        // فیلد تک‌خطی: بدون این، استایل پاراگراف پیش‌فرض (word wrap) متن بلند را می‌شکند و خط دوم
+        // چپ‌چین و بیرون از کادر رسم می‌شود (مثل «یادداشت» در عکس). حالا اگر طولانی باشد، انتهایش «…» می‌شود.
+        style.lineBreakMode = .byTruncatingTail
         tf.defaultTextAttributes = [.font: UIFont.vazir(fontSize, bold: bold),
                                     .foregroundColor: color,
                                     .paragraphStyle: style]
