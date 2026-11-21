@@ -112,23 +112,118 @@ struct OutlinedTextField: View {
     }
 }
 
-/// TextInputLayout چندخطی (OutlinedBox) برای «متن» در دیالوگ متن‌ها: همان GooyaTextView
-/// (ادیتور RTL پروژه) با کادر Outlined و برچسب شناور. فوکوس از اعلان‌های UITextView گرفته می‌شود
-/// (در این دیالوگ فقط یک ادیتور چندخطی وجود دارد).
+/// ادیتور چندخطی دیالوگ‌ها: مثل EditText اندروید با minLines و maxLines؛ تا سقف maxHeight با متن بلند می‌شود،
+/// بعد از آن داخل خودش اسکرول می‌کند (عنوان و دکمه‌های دیالوگ از دید بیرون نمی‌روند).
+/// از همان GooyaRTLTextView و همان درج امن نویسه‌های پروژه (رفع مشکل نشانگر بعد از اسپیس) استفاده می‌کند.
+struct MaterialTextArea: UIViewRepresentable {
+    @Binding var text: String
+    var fontSize: CGFloat
+    var lineMultiple: CGFloat
+    var minHeight: CGFloat
+    var maxHeight: CGFloat
+    var onFocusChange: (Bool) -> Void
+
+    var attributes: [NSAttributedString.Key: Any] {
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = fontSize * (lineMultiple - 1)
+        style.alignment = .right
+        style.baseWritingDirection = .rightToLeft
+        let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
+        return [.font: UIFont.vazir(fontSize),
+                .foregroundColor: UIColor(hex: 0x0F172A),
+                .paragraphStyle: style,
+                .writingDirection: rtl]
+    }
+
+    func makeUIView(context: Context) -> GooyaRTLTextView {
+        let tv = GooyaRTLTextView()
+        tv.delegate = context.coordinator
+        tv.backgroundColor = .clear
+        tv.isScrollEnabled = false
+        tv.textContainerInset = UIEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
+        tv.textContainer.lineFragmentPadding = 0
+        tv.semanticContentAttribute = .forceRightToLeft
+        tv.textAlignment = .right
+        tv.autocorrectionType = .no
+        tv.smartInsertDeleteType = .no
+        if #available(iOS 17.0, *) {
+            tv.inlinePredictionType = .no
+        }
+        tv.forcedTypingAttributes = attributes
+        tv.typingAttributes = attributes
+        tv.attributedText = NSAttributedString(string: text, attributes: attributes)
+        tv.selectedRange = NSRange(location: (text as NSString).length, length: 0)
+        return tv
+    }
+
+    func updateUIView(_ tv: GooyaRTLTextView, context: Context) {
+        context.coordinator.parent = self
+        tv.forcedTypingAttributes = attributes
+        if tv.text != text {
+            let oldRange = tv.selectedRange
+            let wasEditing = tv.isFirstResponder
+            tv.attributedText = NSAttributedString(string: text, attributes: attributes)
+            tv.typingAttributes = attributes
+            let len = (text as NSString).length
+            tv.selectedRange = NSRange(location: wasEditing ? min(oldRange.location, len) : len, length: 0)
+        }
+        // اگر متن از سقف ارتفاع بلندتر شد، اسکرول داخلی روشن می‌شود
+        let width = tv.bounds.width > 0 ? tv.bounds.width : 300
+        let fit = tv.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        let needsScroll = fit.height > maxHeight
+        if tv.isScrollEnabled != needsScroll { tv.isScrollEnabled = needsScroll }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: GooyaRTLTextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? 320
+        let fit = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: min(maxHeight, max(minHeight, fit.height)))
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: MaterialTextArea
+
+        init(_ parent: MaterialTextArea) { self.parent = parent }
+
+        func textViewDidChange(_ textView: UITextView) { parent.text = textView.text }
+        func textViewDidBeginEditing(_ textView: UITextView) { parent.onFocusChange(true) }
+        func textViewDidEndEditing(_ textView: UITextView) { parent.onFocusChange(false) }
+
+        /// درج ساده با استیل RTL خودمان (مثل GooyaTextViewRepresentable)؛ حذف و marked text به UIKit سپرده می‌شود.
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
+                      replacementText text: String) -> Bool {
+            guard !text.isEmpty, textView.markedTextRange == nil else { return true }
+            textView.textStorage.replaceCharacters(
+                in: range, with: NSAttributedString(string: text, attributes: parent.attributes))
+            let caret = range.location + (text as NSString).length
+            textView.selectedRange = NSRange(location: caret, length: 0)
+            textView.typingAttributes = parent.attributes
+            textView.scrollRangeToVisible(textView.selectedRange)
+            parent.text = textView.text
+            return false
+        }
+    }
+}
+
+/// TextInputLayout چندخطی (OutlinedBox): کادر Outlined و برچسب شناور دور MaterialTextArea.
+/// مثل dialog_text اندروید: حداقل ۵ خط و حداکثر حدود ۸ خط، بعد اسکرول داخلی.
 struct OutlinedTextArea: View {
     let label: String
     @Binding var text: String
     var fontSize: CGFloat = 16
     var lineMultiple: CGFloat = 1.5
     var minHeight: CGFloat = 150
+    var maxHeight: CGFloat = 220
 
     @State private var focused = false
 
     private var floated: Bool { focused || !text.isEmpty }
 
     var body: some View {
-        GooyaTextView(text: $text, placeholder: "", fontSize: fontSize,
-                      lineMultiple: lineMultiple, minHeight: minHeight)
+        MaterialTextArea(text: $text, fontSize: fontSize, lineMultiple: lineMultiple,
+                         minHeight: minHeight, maxHeight: maxHeight, onFocusChange: { focused = $0 })
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .stroke(focused ? Color.indigo600 : Color.outline, lineWidth: focused ? 2 : 1)
@@ -147,11 +242,5 @@ struct OutlinedTextArea: View {
             .padding(.top, 8)
             .animation(.easeOut(duration: 0.15), value: floated)
             .animation(.easeOut(duration: 0.15), value: focused)
-            .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidBeginEditingNotification)) { _ in
-                focused = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidEndEditingNotification)) { _ in
-                focused = false
-            }
     }
 }
