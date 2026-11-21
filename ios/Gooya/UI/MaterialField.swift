@@ -111,3 +111,47 @@ struct OutlinedTextField: View {
         .animation(.easeOut(duration: 0.15), value: focused)
     }
 }
+
+/// TextInputLayout چندخطی (OutlinedBox) برای «متن» در دیالوگ متن‌ها: همان GooyaTextView
+/// (ادیتور RTL پروژه) با کادر Outlined و برچسب شناور. فوکوس از اعلان‌های UITextView گرفته می‌شود
+/// (در این دیالوگ فقط یک ادیتور چندخطی وجود دارد).
+struct OutlinedTextArea: View {
+    let label: String
+    @Binding var text: String
+    var fontSize: CGFloat = 16
+    var lineMultiple: CGFloat = 1.5
+    var minHeight: CGFloat = 150
+
+    @State private var focused = false
+
+    private var floated: Bool { focused || !text.isEmpty }
+
+    var body: some View {
+        GooyaTextView(text: $text, placeholder: "", fontSize: fontSize,
+                      lineMultiple: lineMultiple, minHeight: minHeight)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(focused ? Color.indigo600 : Color.outline, lineWidth: focused ? 2 : 1)
+                    .allowsHitTesting(false)
+            )
+            .overlay(alignment: .topLeading) {
+                Text(label)
+                    .font(.vazir(floated ? 12 : 16))
+                    .foregroundColor(focused ? .indigo600 : .onSurfaceVariant)
+                    .padding(.horizontal, floated ? 4 : 0)
+                    .background(floated ? Color.surfaceHigh : Color.clear)
+                    .padding(.horizontal, floated ? 12 : 16)
+                    .offset(y: floated ? -9 : 14)
+                    .allowsHitTesting(false)
+            }
+            .padding(.top, 8)
+            .animation(.easeOut(duration: 0.15), value: floated)
+            .animation(.easeOut(duration: 0.15), value: focused)
+            .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidBeginEditingNotification)) { _ in
+                focused = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidEndEditingNotification)) { _ in
+                focused = false
+            }
+    }
+}
