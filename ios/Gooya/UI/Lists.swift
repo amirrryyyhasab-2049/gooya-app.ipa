@@ -169,16 +169,22 @@ struct DictionaryView: View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 LazyVStack(spacing: 10) {
-                    ForEach(store.dictionary) { entry in row(entry) }
+                    ForEach(store.dictionary) { entry in
+                        row(entry)
+                            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)),
+                                                    removal: .opacity.combined(with: .scale(scale: 0.95))))
+                    }
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
                 .padding(.bottom, 96)
+                .animation(.easeInOut(duration: 0.28), value: store.dictionary.map { $0.id })
             }
             if store.dictionary.isEmpty {
                 EmptyState(icon: "🔤", title: "واژه‌نامه خالی است",
                            desc: "واژه‌هایی مثل «عصبانی» یا «گل» را با اعراب درست ثبت کنید تا گوینده هرگز اشتباه نخواند.")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity)
             }
             FabButton { sheet = DictSheetData() }
         }
@@ -189,14 +195,10 @@ struct DictionaryView: View {
         .materialDialog(item: $sheet) { data in
             DictEditSheet(data: data) {}
         }
-        .alert("حذف واژه", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
-            Button("انصراف", role: .cancel) { deleting = nil }
-            Button("حذف", role: .destructive) {
-                if let d = deleting { store.deleteDictionary(id: d.id) }
-                deleting = nil
+        .materialDialog(item: $deleting) { entry in
+            ConfirmDialog(title: "حذف واژه", message: "«" + entry.word + "» از واژه‌نامه حذف شود؟") {
+                withAnimation(.easeInOut(duration: 0.28)) { store.deleteDictionary(id: entry.id) }
             }
-        } message: {
-            Text("«" + (deleting?.word ?? "") + "» از واژه‌نامه حذف شود؟")
         }
     }
 
@@ -228,11 +230,11 @@ struct DictionaryView: View {
                     .padding(.top, 4)
             }
             HStack(spacing: 0) {
-                GButton(title: "🔊 بشنو", kind: .tonal) { listen(e.diacritized) }
-                GButton(title: "ویرایش", kind: .text(.indigo600)) {
+                MButton(title: "🔊 بشنو", kind: .tonal) { listen(e.diacritized) }
+                MButton(title: "ویرایش", kind: .text(.indigo600)) {
                     sheet = DictSheetData(entryId: e.id, word: e.word, diacritized: e.diacritized, note: e.note)
                 }
-                GButton(title: "حذف", kind: .text(.rose600)) { deleting = e }
+                MButton(title: "حذف", kind: .text(.rose600)) { deleting = e }
                 Spacer()
             }
             .padding(.top, 6)
