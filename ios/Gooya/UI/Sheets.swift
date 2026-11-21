@@ -79,14 +79,9 @@ struct TextEditSheet: View {
 
     var body: some View {
         DialogFrame(title: heading, error: error, onSave: save) {
-            LabeledField("عنوان (اختیاری)") {
-                GooyaTextField(text: $title)
-                    .frame(height: 48)
-            }
-            LabeledField("متن") {
-                GooyaTextView(text: $content, placeholder: "", fontSize: 16, lineMultiple: 1.5, minHeight: 150)
-                    .padding(.horizontal, -12)
-            }
+            // مثل dialog_text اندروید: دو فیلد Outlined با برچسب شناور
+            OutlinedTextField(label: "عنوان (اختیاری)", text: $title)
+            OutlinedTextArea(label: "متن", text: $content)
         }
     }
 
