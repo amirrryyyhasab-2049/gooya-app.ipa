@@ -88,12 +88,12 @@ struct TextsView: View {
             }
             FabButton { creating = true }
         }
-        .sheet(isPresented: $creating) {
+        .materialDialog(isPresented: $creating) {
             TextEditSheet(heading: "متن جدید", title: "", content: "") { t, c in
                 store.insertText(title: t, content: c)
             }
         }
-        .sheet(item: $editing) { doc in
+        .materialDialog(item: $editing) { doc in
             TextEditSheet(heading: "ویرایش متن", title: doc.title, content: doc.content) { t, c in
                 store.updateText(id: doc.id, title: t, content: c)
             }
@@ -180,7 +180,7 @@ struct DictionaryView: View {
         .onChange(of: engine.notice) { newValue in
             if let n = newValue { model.toast(n) }
         }
-        .sheet(item: $sheet) { data in
+        .materialDialog(item: $sheet) { data in
             DictEditSheet(data: data) {}
         }
         .alert("حذف واژه", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
