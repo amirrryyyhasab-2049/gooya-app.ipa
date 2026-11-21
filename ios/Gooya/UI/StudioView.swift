@@ -79,11 +79,15 @@ struct StudioView: View {
         .onChange(of: engine.notice) { newValue in
             if let n = newValue { model.toast(n) }
         }
-        .confirmationDialog("نمونه متن", isPresented: $showSamples, titleVisibility: .visible) {
-            ForEach(0..<SeedData.samples.count, id: \.self) { i in
-                Button(SeedData.samples[i].title) { loadSample(i) }
+        .overlay {
+            if showSamples {
+                SampleDialog(title: "نمونه متن",
+                             items: SeedData.samples.map { $0.title },
+                             onPick: { i in showSamples = false; loadSample(i) },
+                             onDismiss: { showSamples = false })
             }
         }
+        .animation(.easeOut(duration: 0.18), value: showSamples)
         .sheet(isPresented: $showSave) {
             TextEditSheet(heading: sourceTextId != nil ? "به‌روزرسانی متن" : "ذخیرهٔ متن", title: title, content: text) { newTitle, content in
                 if let id = sourceTextId {
@@ -109,11 +113,10 @@ struct StudioView: View {
 
     private static let barFirstID = "bar-first"
 
-    /// فرض: UnitPoint جهت‌دار نیست و لبهٔ شروع RTL همان لبهٔ راست (.trailing) است.
-    /// اگر در تست نوار به‌جای راست روی چپ رفت، anchor را به .leading عوض کن.
     private func scrollBarToStart(_ proxy: ScrollViewProxy) {
         DispatchQueue.main.async {
-            proxy.scrollTo(Self.barFirstID, anchor: .trailing)
+            // بدون anchor: فقط اگر اولین دکمه (لبهٔ راست) بیرون از دید باشد، به اندازهٔ لازم اسکرول می‌کند
+            proxy.scrollTo(Self.barFirstID)
         }
     }
 
@@ -139,7 +142,7 @@ struct StudioView: View {
             }
 
             if showDiacriticBar {
-                DiacriticBar(inserter: inserter).padding(.top, 4)
+                DiacriticKeyBar(inserter: inserter).padding(.top, 4)
             }
 
             GooyaTextView(text: $text,
