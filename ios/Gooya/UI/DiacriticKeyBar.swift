@@ -2,7 +2,10 @@ import SwiftUI
 
 /// نوار علامت‌های اعراب (DiacriticBar اندروید): اسکرول افقی که همیشه از لبهٔ راست (فتحه) شروع می‌شود.
 struct DiacriticKeyBar: View {
-    let inserter: TextInserter
+    let onInsert: (String) -> Void
+
+    init(inserter: TextInserter) { onInsert = { inserter.insert($0) } }
+    init(onInsert: @escaping (String) -> Void) { self.onInsert = onInsert }
 
     private static let keys: [(String, String)] = [
         ("\u{064E}", "اَ  فتحه"),
@@ -22,7 +25,7 @@ struct DiacriticKeyBar: View {
                 HStack(spacing: 6) {
                     ForEach(0..<Self.keys.count, id: \.self) { i in
                         Button {
-                            inserter.insert(Self.keys[i].0)
+                            onInsert(Self.keys[i].0)
                         } label: {
                             Text(Self.keys[i].1)
                                 .font(.vazir(13))
