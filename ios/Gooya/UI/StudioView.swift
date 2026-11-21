@@ -88,7 +88,7 @@ struct StudioView: View {
             }
         }
         .animation(.easeOut(duration: 0.18), value: showSamples)
-        .sheet(isPresented: $showSave) {
+        .materialDialog(isPresented: $showSave) {
             TextEditSheet(heading: sourceTextId != nil ? "به‌روزرسانی متن" : "ذخیرهٔ متن", title: title, content: text) { newTitle, content in
                 if let id = sourceTextId {
                     store.updateText(id: id, title: newTitle, content: content)
@@ -101,7 +101,7 @@ struct StudioView: View {
                 text = content
             }
         }
-        .sheet(item: $dictSheet) { data in
+        .materialDialog(item: $dictSheet) { data in
             DictEditSheet(data: data) {
                 unknownWords.removeAll { $0 == data.word }
                 model.toast("به واژه‌نامه اضافه شد. دوباره «اعراب‌گذاری خودکار» را بزنید.")
