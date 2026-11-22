@@ -92,9 +92,9 @@ struct ConfirmDialog: View {
                 .lineSpacing(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 10) {
-                MButton(title: confirmTitle, kind: .filled(.rose600)) { onConfirm(); dismiss() }
-                MButton(title: "انصراف", kind: .text(.indigo600)) { dismiss() }
                 Spacer()
+                MButton(title: "انصراف", kind: .text(.indigo600)) { dismiss() }
+                MButton(title: confirmTitle, kind: .filled(.rose600)) { onConfirm(); dismiss() }
             }
         }
         .padding(24)
