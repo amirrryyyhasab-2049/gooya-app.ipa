@@ -144,7 +144,7 @@ struct DrawerView: View {
                 // گزینهٔ «به‌زودی»: صفحه‌ای باز نمی‌شود؛ فقط منو بسته می‌شود و پیام دوستانه نشان داده می‌شود
                 Button {
                     withAnimation(.easeOut(duration: 0.22)) { model.drawerOpen = false }
-                    model.toast("به‌زودی! 😉 گفتار به نوشتار 🎙️ به گویا اضافه می‌شه ❤️", seconds: 5)
+                    model.toast("به‌زودی! 😉 گفتار به نوشتار 🎙️ به گویا اضافه می‌شه ❤️")
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "waveform")
