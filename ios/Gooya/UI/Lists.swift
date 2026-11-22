@@ -348,14 +348,6 @@ struct HelpView: View {
                     openSettings()
                 }
 
-                GButton(title: "گزارش عیب‌یابی (اشتراک فایل)", icon: "ladybug", kind: .outlined(foreground: .indigo600, border: .outline), fullWidth: true) {
-                    if FileManager.default.fileExists(atPath: DebugLog.fileURL.path) {
-                        if !ShareHelper.present(DebugLog.fileURL) { model.toast("باز کردن منوی اشتراک ممکن نشد.") }
-                    } else {
-                        model.toast("هنوز گزارشی ثبت نشده است.")
-                    }
-                }
-
                 Text(statusText)
                     .font(.vazir(13))
                     .foregroundColor(.slate500)
