@@ -26,10 +26,11 @@ private struct DialogFrame<Content: View>: View {
                 if let error = error {
                     Text(error).font(.vazir(13)).foregroundColor(.rose600)
                 }
+                // دکمه‌ها گوشهٔ پایین-چپ: «ذخیره» چپ‌ترین، «انصراف» کنار آن (به‌ترتیب چینش راست‌به‌چپ: فضای خالی، انصراف، ذخیره)
                 HStack(spacing: 10) {
-                    GButton(title: saveTitle, kind: .filled(.emerald600)) { onSave() }
-                    GButton(title: "انصراف", kind: .filled(.rose600)) { dismiss() }
                     Spacer()
+                    GButton(title: "انصراف", kind: .filled(.rose600)) { dismiss() }
+                    GButton(title: saveTitle, kind: .filled(.emerald600)) { onSave() }
                 }
             }
             .padding(24)
