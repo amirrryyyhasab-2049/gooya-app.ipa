@@ -140,6 +140,25 @@ struct DrawerView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // گزینهٔ «به‌زودی»: صفحه‌ای باز نمی‌شود؛ فقط منو بسته می‌شود و پیام دوستانه نشان داده می‌شود
+                Button {
+                    withAnimation(.easeOut(duration: 0.22)) { model.drawerOpen = false }
+                    model.toast("به‌زودی! 😉 گفتار به نوشتار 🎙️ به‌زودی به گویا اضافه می‌شه ❤️")
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 20))
+                            .frame(width: 28)
+                        Text("گفتار به نوشتار (به‌زودی)")
+                            .font(.vazir(15))
+                        Spacer()
+                    }
+                    .foregroundColor(.onSurfaceVariant)
+                    .padding(.horizontal, 16)
+                    .frame(height: 56)
+                }
+                .buttonStyle(PressStateStyle(shape: Capsule(), layer: .slate400, pressedOpacity: 0.14))
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
