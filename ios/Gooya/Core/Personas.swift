@@ -28,7 +28,7 @@ struct VoiceSettings: Equatable {
     var personaId = Personas.defaultId
     var rate = 1.0
     var pitch = 1.0
-    var pauseScale = 1.0
+    var pauseScale = 0.6
 
     var persona: Persona { Personas.get(personaId) }
 }
