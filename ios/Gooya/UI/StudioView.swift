@@ -164,7 +164,7 @@ struct StudioView: View {
                         .foregroundColor(.amber800)
                     FlowLayout(spacing: 6, lineSpacing: 6) {
                         ForEach(unknownWords, id: \.self) { w in
-                            ChipView(label: w + " +", fill: .white) {
+                            ChipView(label: w + " +", fill: .surface) {
                                 dictSheet = DictSheetData(word: w, diacritized: w)
                             }
                         }
