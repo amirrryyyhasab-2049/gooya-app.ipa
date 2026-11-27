@@ -117,7 +117,8 @@ struct OutlinedTextField: View {
 
 /// ادیتور چندخطی دیالوگ‌ها: مثل EditText اندروید با minLines و maxLines؛ تا سقف maxHeight با متن بلند می‌شود،
 /// بعد از آن داخل خودش اسکرول می‌کند (عنوان و دکمه‌های دیالوگ از دید بیرون نمی‌روند).
-/// از همان GooyaRTLTextView و همان درج امن نویسه‌های پروژه (رفع مشکل نشانگر بعد از اسپیس) استفاده می‌کند.
+/// همان منطق دوجهتی GooyaTextViewRepresentable را دارد: فارسی RTL، جزیره‌های انگلیسی LTR،
+/// و نویسه‌های خنثی (اسپیس، علائم) جهت را از متن قبل از مکان‌نما می‌گیرند.
 struct MaterialTextArea: UIViewRepresentable {
     @Binding var text: String
     var fontSize: CGFloat
@@ -126,16 +127,35 @@ struct MaterialTextArea: UIViewRepresentable {
     var maxHeight: CGFloat
     var onFocusChange: (Bool) -> Void
 
-    var attributes: [NSAttributedString.Key: Any] {
+    func attributes(for direction: GooyaWritingDirection) -> [NSAttributedString.Key: Any] {
         let style = NSMutableParagraphStyle()
         style.lineSpacing = fontSize * (lineMultiple - 1)
         style.alignment = .right
         style.baseWritingDirection = .rightToLeft
-        let rtl = [NSNumber(value: NSWritingDirection.rightToLeft.rawValue)]
         return [.font: UIFont.vazir(fontSize),
                 .foregroundColor: UIColor(hex: 0x0F172A),
                 .paragraphStyle: style,
-                .writingDirection: rtl]
+                .writingDirection: direction.embedding]
+    }
+
+    func styled(_ string: String, initial: GooyaWritingDirection = .rtl) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        var run = ""
+        var runDir = initial
+        for s in string.unicodeScalars {
+            if let d = GooyaWritingDirection.strong(of: s) {
+                if !run.isEmpty && d != runDir {
+                    result.append(NSAttributedString(string: run, attributes: attributes(for: runDir)))
+                    run = ""
+                }
+                runDir = d
+            }
+            run.unicodeScalars.append(s)
+        }
+        if !run.isEmpty {
+            result.append(NSAttributedString(string: run, attributes: attributes(for: runDir)))
+        }
+        return result
     }
 
     func makeUIView(context: Context) -> GooyaRTLTextView {
@@ -152,23 +172,27 @@ struct MaterialTextArea: UIViewRepresentable {
         if #available(iOS 17.0, *) {
             tv.inlinePredictionType = .no
         }
-        tv.forcedTypingAttributes = attributes
-        tv.typingAttributes = attributes
-        tv.attributedText = NSAttributedString(string: text, attributes: attributes)
-        tv.selectedRange = NSRange(location: (text as NSString).length, length: 0)
+        tv.attributedText = styled(text)
+        let end = (text as NSString).length
+        tv.selectedRange = NSRange(location: end, length: 0)
+        let dir = GooyaWritingDirection.context(in: text as NSString, at: end)
+        tv.forcedTypingAttributes = attributes(for: dir)
+        tv.typingAttributes = attributes(for: dir)
         return tv
     }
 
     func updateUIView(_ tv: GooyaRTLTextView, context: Context) {
         context.coordinator.parent = self
-        tv.forcedTypingAttributes = attributes
         if tv.text != text {
             let oldRange = tv.selectedRange
             let wasEditing = tv.isFirstResponder
-            tv.attributedText = NSAttributedString(string: text, attributes: attributes)
-            tv.typingAttributes = attributes
+            tv.attributedText = styled(text)
             let len = (text as NSString).length
-            tv.selectedRange = NSRange(location: wasEditing ? min(oldRange.location, len) : len, length: 0)
+            let loc = wasEditing ? min(oldRange.location, len) : len
+            tv.selectedRange = NSRange(location: loc, length: 0)
+            let dir = GooyaWritingDirection.context(in: text as NSString, at: loc)
+            tv.forcedTypingAttributes = attributes(for: dir)
+            tv.typingAttributes = attributes(for: dir)
         }
         // اگر متن از سقف ارتفاع بلندتر شد، اسکرول داخلی روشن می‌شود
         let width = tv.bounds.width > 0 ? tv.bounds.width : 300
@@ -194,15 +218,25 @@ struct MaterialTextArea: UIViewRepresentable {
         func textViewDidBeginEditing(_ textView: UITextView) { parent.onFocusChange(true) }
         func textViewDidEndEditing(_ textView: UITextView) { parent.onFocusChange(false) }
 
-        /// درج ساده با استیل RTL خودمان (مثل GooyaTextViewRepresentable)؛ حذف و marked text به UIKit سپرده می‌شود.
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            guard let tv = textView as? GooyaRTLTextView else { return }
+            let dir = GooyaWritingDirection.context(in: (tv.text ?? "") as NSString,
+                                                    at: tv.selectedRange.location)
+            tv.forcedTypingAttributes = parent.attributes(for: dir)
+        }
+
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange,
                       replacementText text: String) -> Bool {
             guard !text.isEmpty, textView.markedTextRange == nil else { return true }
-            textView.textStorage.replaceCharacters(
-                in: range, with: NSAttributedString(string: text, attributes: parent.attributes))
+            let baseDir = GooyaWritingDirection.context(in: (textView.text ?? "") as NSString,
+                                                        at: range.location)
+            textView.textStorage.replaceCharacters(in: range, with: parent.styled(text, initial: baseDir))
             let caret = range.location + (text as NSString).length
             textView.selectedRange = NSRange(location: caret, length: 0)
-            textView.typingAttributes = parent.attributes
+            let dir = GooyaWritingDirection.context(in: (textView.text ?? "") as NSString, at: caret)
+            let attrs = parent.attributes(for: dir)
+            if let tv = textView as? GooyaRTLTextView { tv.forcedTypingAttributes = attrs }
+            textView.typingAttributes = attrs
             textView.scrollRangeToVisible(textView.selectedRange)
             parent.text = textView.text
             return false
