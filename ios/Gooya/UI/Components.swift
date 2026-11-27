@@ -82,7 +82,7 @@ struct ChipView: View {
                 .padding(.horizontal, 12)
                 .frame(height: 32)
                 .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(fill ?? (selected ? Color.tonalBg : Color.white)))
+                    .fill(fill ?? (selected ? Color.tonalBg : Color.surface)))
                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(selected ? Color.clear : Color.outline, lineWidth: 1))
         }
