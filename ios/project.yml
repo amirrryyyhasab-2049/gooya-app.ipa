@@ -22,7 +22,6 @@ targets:
         UIAppFonts:
           - Vazirmatn-Regular.ttf
           - Vazirmatn-Bold.ttf
-        UIUserInterfaceStyle: Light
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UIViewControllerBasedStatusBarAppearance: false
         UIBackgroundModes:
