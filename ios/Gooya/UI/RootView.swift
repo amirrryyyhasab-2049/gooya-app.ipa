@@ -5,6 +5,7 @@ struct RootView: View {
     @StateObject private var model = AppModel()
     @StateObject private var settings = AppSettings()
     @StateObject private var store = Store()
+    @ObservedObject private var theme = ThemeManager.shared
 
     var body: some View {
         GeometryReader { geo in
@@ -66,7 +67,7 @@ struct RootView: View {
         .environmentObject(model)
         .environmentObject(settings)
         .environmentObject(store)
-        .preferredColorScheme(.light)
+        .preferredColorScheme(theme.isDark ? .dark : .light)
         .animation(.easeOut(duration: 0.2), value: model.toastText)
     }
 
@@ -91,6 +92,8 @@ struct RootView: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
             Spacer()
+            // کنترل تم: گوشهٔ بالا-چپ (در چینش راست‌به‌چپ، آخرین عنصر نوار)
+            ThemeToggleButton()
         }
         .padding(.horizontal, 4)
         .frame(height: 56)
@@ -144,7 +147,7 @@ struct DrawerView: View {
                 // گزینهٔ «به‌زودی»: صفحه‌ای باز نمی‌شود؛ فقط منو بسته می‌شود و پیام دوستانه نشان داده می‌شود
                 Button {
                     withAnimation(.easeOut(duration: 0.22)) { model.drawerOpen = false }
-                    model.toast("به‌زودی! 😉 گفتار به نوشتار 🎙️ به گویا اضافه می‌شه ❤️")
+                    model.toast("به‌زودی! 😉 گفتار به نوشتار 🎙️ به گویا اضافه می‌شه ❤️", seconds: 5)
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "waveform")
