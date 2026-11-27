@@ -276,11 +276,11 @@ final class AppModel: ObservableObject {
         screen = .studio
     }
 
-    func toast(_ message: String) {
+    func toast(_ message: String, seconds: Double = 2.2) {
         toastText = message
         toastTask?.cancel()
         toastTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             if Task.isCancelled { return }
             self?.toastText = nil
         }
